@@ -1,0 +1,62 @@
+@import '../style/themes/index.less';
+
+.button-group {
+  position: relative;
+  display: inline-block;
+  height: 30px;
+  padding: 3px 15px;
+  font-size: @font-size-base;
+  line-height: @line-height-base;
+  white-space: nowrap;
+  text-align: center;
+  background-color: @color-bg-grey;
+  background-image: none;
+  border: 0 none;
+  border-radius: @radius-size-base;
+  outline: none;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.015);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  user-select: none;
+  touch-action: manipulation;
+  &:hover {
+    background-color: @color-bg-grey-hover;
+  }
+
+  // 大小
+  &-large {
+    height: 40px;
+  }
+  &-small {
+    height: 26px;
+  }
+
+  // 颜色
+  &-primary {
+    color: #fff;
+    background-color: @color-bg-primary;
+    &:hover {
+      background-color: @color-bg-primary-hover;
+    }
+  }
+
+  // 按钮字体图标位置
+  .anticon {
+    margin-left: 5px;
+    font-size: 12px;
+    &.anticon-close {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: #fff;
+      font-size: 10px;
+      background-color: @color-bg-thumb;
+      border-radius: 100%;
+    }
+  }
+}

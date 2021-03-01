@@ -1,6 +1,6 @@
 {
   "name": "hlyc-components-web",
-  "version": "1.0.2",
+  "version": "1.0.5",
   "description": "华旅云创web端组件",
   "main": "./lib/index.main.js",
   "module": "./lib/index.module.js",
@@ -9,8 +9,7 @@
     "doc": "styleguidist server",
     "build": "rimraf lib && cross-env NODE_ENV=production rollup -c",
     "build:doc": "rimraf dist_docs && styleguidist build",
-    "commit": "git-cz",
-    "pub": "npm run build && npm publish"
+    "commit": "git-cz"
   },
   "files": [
     "lib"
