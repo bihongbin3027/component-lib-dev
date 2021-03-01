@@ -1,0 +1,6 @@
+# 忽略哪些文件的语法检查
+
+/dist_docs
+/lib
+/node_modules
+/__tests__

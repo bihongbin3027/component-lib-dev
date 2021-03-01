@@ -1,0 +1,70 @@
+{
+  "name": "hlyc-components-web",
+  "version": "1.0.2",
+  "description": "华旅云创web端组件",
+  "main": "./lib/index.main.js",
+  "module": "./lib/index.module.js",
+  "typings": "./lib/index.d.ts",
+  "scripts": {
+    "doc": "styleguidist server",
+    "build": "rimraf lib && cross-env NODE_ENV=production rollup -c",
+    "build:doc": "rimraf dist_docs && styleguidist build",
+    "commit": "git-cz",
+    "pub": "npm run build && npm publish"
+  },
+  "files": [
+    "lib"
+  ],
+  "author": "hbi",
+  "license": "MIT",
+  "dependencies": {
+    "@babel/core": "^7.11.6",
+    "@rollup/plugin-babel": "^5.3.0",
+    "@rollup/plugin-commonjs": "^17.1.0",
+    "@rollup/plugin-json": "^4.1.0",
+    "@rollup/plugin-node-resolve": "^11.2.0",
+    "react-docgen-typescript": "^1.21.0",
+    "rollup-plugin-postcss": "^4.0.0",
+    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-typescript2": "^0.30.0",
+    "typescript": "^4.2.2"
+  },
+  "devDependencies": {
+    "@babel/plugin-transform-runtime": "^7.13.7",
+    "@babel/preset-env": "^7.11.5",
+    "@babel/preset-react": "^7.10.4",
+    "@babel/preset-typescript": "^7.13.0",
+    "@babel/runtime": "^7.13.7",
+    "@commitlint/cli": "^12.0.0",
+    "@commitlint/config-conventional": "^12.0.0",
+    "@types/react": "^17.0.2",
+    "@typescript-eslint/parser": "^4.15.2",
+    "@umijs/fabric": "^2.5.6",
+    "antd": "^4.6.5",
+    "babel-jest": "^26.6.3",
+    "babel-loader": "^8.1.0",
+    "babel-plugin-import": "^1.13.3",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.26.2",
+    "babel-preset-react-app": "^10.0.0",
+    "babel-preset-stage-2": "^6.24.1",
+    "cross-env": "^7.0.3",
+    "css-loader": "^4.0.0",
+    "eslint": "^7.20.0",
+    "git-cz": "^4.7.6",
+    "less": "3.12.2",
+    "less-loader": "6.2.0",
+    "plop": "^2.7.4",
+    "prettier": "^2.2.1",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-styleguidist": "^11.1.5",
+    "rollup": "^2.39.1",
+    "style-loader": "^1.2.1",
+    "webpack": "^4.44.2"
+  },
+  "peerDependencies": {
+    "antd": "^4.6.5",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1"
+  }
+}
