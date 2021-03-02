@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2021-03-01 14:22:57
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-01 18:10:29
+ * @LastEditTime 2021-03-02 11:27:32
  */
 
 import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
@@ -21,12 +21,18 @@ export interface ButtonGroupListType {
 }
 
 export interface ButtonGroupTypeProps {
-  data: ButtonGroupListType[]; // 按钮组数据
+  /** 按钮组数据 */
+  data: ButtonGroupListType[];
   className?: string;
-  buttonClassName?: string; // button的className
+  /** button的className */
+  buttonClassName?: string;
+  /** 按钮大小 */
   size?: 'large' | 'middle' | 'small';
-  checkType?: 'checkbox' | 'radio'; // 单选和多选
-  deleteOpen?: boolean; // 是否打开删除功能
+  /** 单选和多选 */
+  checkType?: 'checkbox' | 'radio';
+  /** 是否打开删除功能 */
+  deleteOpen?: boolean;
+  /** 按钮删除和选中的回调 */
   onChange?: (data: ButtonGroupListType[]) => void;
 }
 
@@ -167,10 +173,10 @@ function ButtonGroup(props: ButtonGroupTypeProps, ref: any) {
     <Row className={props.className} gutter={[10, 10]}>
       {state.data.map((item, index) => (
         <Col key={index}>
-          <button className={buttonClassName(item)} onClick={() => handleSelected(item, index)}>
+          <div className={buttonClassName(item)} onClick={() => handleSelected(item, index)}>
             {item.name}
             {state.deleteOpen ? <CloseOutlined onClick={() => handleDelete(index)} /> : null}
-          </button>
+          </div>
         </Col>
       ))}
     </Row>

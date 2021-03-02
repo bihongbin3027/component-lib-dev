@@ -7,6 +7,8 @@ import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 import { DEFAULT_EXTENSIONS } from '@babel/core';
 
+const antdVars = require('./antd-vars.json')
+
 const isProd = process.env.NODE_ENV === 'production';
 
 const pkg = require('./package.json');
@@ -69,7 +71,12 @@ export default {
       sourceMap: !isProd,
       // This plugin will process files ending with these extensions and the extensions supported by custom loaders.
       extensions: ['.less', '.css'],
-      use: [['less', { javascriptEnabled: true }]],
+      use: [
+        ['less', {
+          javascriptEnabled: true,
+          modifyVars: antdVars
+        }]
+      ],
     }),
     isProd && terser(), // 压缩js
   ],

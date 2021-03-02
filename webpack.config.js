@@ -1,3 +1,5 @@
+const antdVars = require('./antd-vars.json')
+
 module.exports = {
   entry: './components/index.js',
   module: {
@@ -20,6 +22,7 @@ module.exports = {
             options: {
               lessOptions: {
                 javascriptEnabled: true,
+                modifyVars: antdVars
               },
             },
           },
