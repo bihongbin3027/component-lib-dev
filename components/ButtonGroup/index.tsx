@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2021-03-01 14:22:57
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-02 11:27:32
+ * @LastEditTime 2021-03-02 18:00:46
  */
 
 import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
@@ -48,6 +48,7 @@ interface StateType {
 
 const baseStr = 'button-group';
 
+/** 按钮组，包含组件单选、多选和按钮组删除功能 */
 function ButtonGroup(props: ButtonGroupTypeProps, ref: any) {
   const [state, setState] = useSetState<StateType>({
     type: 'checkbox', // 选择类型（单选和多选）

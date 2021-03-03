@@ -67,17 +67,12 @@ npm install hlyc-components-web
 
 ```
 import React from 'react';
-import { BaseButton } from 'hlyc-components-web'
+import { Empty } from 'hlyc-components-web'
 
 function App() {
-  const [visible, setVisible] = React.useState(false);
-
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <BaseButton>按钮</BaseButton>
-      </header>
+      <Empty />
     </div>
   );
 }
