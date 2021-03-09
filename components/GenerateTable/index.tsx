@@ -6,23 +6,15 @@ import React, {
   useMemo,
   useCallback,
   useEffect,
-  useContext,
 } from 'react';
 import _ from 'lodash';
-import { v4 as uuidV4 } from 'uuid';
-import moment from 'moment';
-import { Table, Form, Input, Select, DatePicker, Spin } from 'antd';
+import { Table } from 'antd';
 import { TablePaginationConfig, TableProps, ColumnType } from 'antd/es/table';
-import { Rule } from 'rc-field-form/lib/interface';
+import ConfigProvider from '../unrelated/ConfigProvider';
 import ResizableTitle from './ResizableTitle';
-import { SelectType, AnyObjectType, PromiseAxiosResultType } from '../typings';
+import EditableCell, { EditableRow, EditableColumnsType } from './EditableCell';
+import { AnyObjectType, PromiseAxiosResultType } from '../unrelated/typings';
 import './index.less';
-
-const { Option } = Select;
-const EditableContext = React.createContext<any>(null);
-
-type remoteValueType = string | undefined;
-type remotePromiseType = (value: remoteValueType) => Promise<SelectType[]>;
 
 // 导出表格头类型
 export type TableColumns<T = AnyObjectType> = ColumnType<T> & Partial<EditableColumnsType>;
@@ -44,209 +36,25 @@ type ScrollXYType = {
 
 // 组件传参配置
 interface GenerateTableProp {
-  tableConfig?: TableProps<any>; // 支持antd Table组件官方传参所有类型
-  rowType?: 'checkbox' | 'radio' | undefined; // 是否开启表格行选中 checkbox多选 radio单选
-  scroll?: ScrollXYType; // 开启固定列参数
-  apiMethod?: (data: any) => PromiseAxiosResultType; // 列表请求函数
-  columns: ColumnType<AnyObjectType>[]; // 表格头
-  data?: AnyObjectType[]; // 列表数据
-  onSelect?: (selectedRows: AnyObjectType[], selectedRowKeys: any[]) => void; // 行选中回调
-  paginationConfig?: false | TablePaginationConfig; // 控制分页格式
-  getCheckboxProps?: (record: AnyObjectType) => AnyObjectType; // 选择框的默认属性配置
+  /** 支持antd Table组件官方传参所有类型 */
+  tableConfig?: TableProps<any>;
+  /** 是否开启表格行选中 checkbox多选 radio单选 */
+  rowType?: 'checkbox' | 'radio' | undefined;
+  /** 开启固定列参数 */
+  scroll?: ScrollXYType;
+  /** 列表请求函数 */
+  apiMethod?: (data: any) => PromiseAxiosResultType;
+  /** 表格头 */
+  columns: ColumnType<AnyObjectType>[];
+  /** 静态表格数据 */
+  data?: AnyObjectType[];
+  /** 行选中回调 */
+  onSelect?: (selectedRows: AnyObjectType[], selectedRowKeys: any[]) => void;
+  /** 控制分页格式 */
+  paginationConfig?: false | TablePaginationConfig;
+  /** 选择框的默认属性配置 */
+  getCheckboxProps?: (record: AnyObjectType) => AnyObjectType;
 }
-
-interface EditableColumnsType {
-  editable: boolean;
-  inputType: 'number';
-  valueType: 'Select' | 'DatePicker' | 'RemoteSearch'; // 单元格表单类型
-  valueEnum: SelectType[];
-  formChange: (record: AnyObjectType) => AnyObjectType; // 表单值改变触发
-  remoteConfig: {
-    remoteApi: remotePromiseType; // 远程搜索的api
-    remoteMode?: 'multiple' | 'tags'; // 远程搜索模式为多选或标签
-  };
-  formItemProps: {
-    rules: Rule[];
-  };
-}
-
-type EditableCellProps = {
-  title: React.ReactNode;
-  children: React.ReactNode;
-  dataIndex: string;
-  record: AnyObjectType;
-  handleSave: (record: AnyObjectType) => void;
-} & EditableColumnsType;
-
-const EditableRow: React.FC = (props, func) => {
-  const [form] = Form.useForm();
-  const [uuId] = useState(uuidV4());
-
-  return (
-    <Form name={uuId} form={form} component={false}>
-      <EditableContext.Provider value={form}>
-        <tr {...props} />
-      </EditableContext.Provider>
-    </Form>
-  );
-};
-
-const EditableCell: React.FC<EditableCellProps> = ({
-  title,
-  editable,
-  inputType,
-  valueType,
-  valueEnum,
-  formChange,
-  remoteConfig,
-  formItemProps,
-  children,
-  dataIndex,
-  record,
-  handleSave,
-  ...restProps
-}) => {
-  const inputRef = useRef<any>();
-  const form = useContext(EditableContext);
-  // 远程搜索loading
-  const [remoteFetching, setRemoteFetching] = useState(false);
-  // 远程搜索数据结果
-  const [remoteData, setRemoteData] = useState<{ [key: string]: SelectType[] }>({});
-
-  /**
-   * @Description 远程数据搜索
-   * @Author bihongbin
-   * @Date 2021-01-05 11:14:45
-   */
-  const fetchRemote = (
-    value: remoteValueType,
-    fieldName: string | undefined,
-    remoteApi?: remotePromiseType,
-  ) => {
-    if (remoteApi) {
-      setRemoteFetching(true);
-      remoteApi(value).then((res) => {
-        setRemoteFetching(false);
-        if (fieldName) {
-          setRemoteData({
-            [fieldName]: res,
-          });
-        }
-      });
-    }
-  };
-
-  // 如果是表单表格项，初始化数据赋值
-  if (editable) {
-    let val = record[dataIndex];
-    // 如果是时间类型，转换
-    if (moment(val, 'YYYY-MM-DD', true).isValid()) {
-      val = moment(val);
-    }
-    setTimeout(() => {
-      form.setFieldsValue({
-        [dataIndex]: val,
-      });
-    });
-  }
-
-  // 显示不同类型的表单
-  const filterFormType = (type: EditableCellProps['valueType'], title: string) => {
-    let node: React.ReactNode = null;
-    switch (type) {
-      case 'Select':
-        node = (
-          <Select ref={inputRef} onSelect={save} placeholder={title}>
-            {_.isArray(valueEnum)
-              ? valueEnum.map((m, i) => (
-                  <Option key={i} value={m.value}>
-                    {m.label}
-                  </Option>
-                ))
-              : null}
-          </Select>
-        );
-        break;
-      case 'DatePicker':
-        node = <DatePicker ref={inputRef} onChange={save} placeholder={title} />;
-        break;
-      case 'RemoteSearch':
-        node = (
-          <Select
-            mode={remoteConfig.remoteMode}
-            placeholder={title}
-            notFoundContent={remoteFetching ? <Spin size="small" /> : null}
-            filterOption={false}
-            allowClear
-            showSearch
-            // 当获取焦点查询全部
-            onFocus={() => fetchRemote(undefined, dataIndex, remoteConfig.remoteApi)}
-            onSearch={(value) => fetchRemote(value, dataIndex, remoteConfig.remoteApi)}
-          >
-            {dataIndex && remoteData[dataIndex]
-              ? remoteData[dataIndex].map((s: SelectType, k) => (
-                  <Option value={s.value} key={k}>
-                    {s.label}
-                  </Option>
-                ))
-              : null}
-          </Select>
-        );
-        break;
-      default:
-        node = (
-          <Input
-            ref={inputRef}
-            onPressEnter={save}
-            onBlur={save}
-            placeholder={title}
-            type={inputType ? inputType : 'text'}
-          />
-        );
-        break;
-    }
-    return node;
-  };
-
-  // 更新值到record
-  const save = async () => {
-    try {
-      const values = await form.validateFields();
-      let data = { ...record, ...values };
-      for (let i in data) {
-        // 如果是时间类型，转换
-        if (moment.isMoment(data[i])) {
-          data[i] = moment(data[i]).format('YYYY-MM-DD');
-        }
-      }
-      if (formChange) {
-        data = formChange(data); // 单元格值改变触发
-      }
-      handleSave(data);
-    } catch (errInfo) {
-      console.log('保存表单字段失败:', errInfo);
-    }
-  };
-
-  let childNode = children;
-  if (editable) {
-    childNode = (
-      <Form.Item
-        style={{ margin: 0 }}
-        name={dataIndex}
-        rules={formItemProps ? formItemProps.rules : undefined}
-      >
-        {filterFormType(valueType, title as string)}
-      </Form.Item>
-    );
-  }
-
-  return (
-    <td {...restProps} title={title as string}>
-      {childNode}
-    </td>
-  );
-};
 
 /** 表格组件 */
 const GenerateTable = (props: GenerateTableProp, ref: any) => {
@@ -538,7 +346,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
   }));
 
   return (
-    <>
+    <ConfigProvider>
       <Table
         rowKey="id"
         rowClassName={() => 'editable-row'}
@@ -572,7 +380,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
         scroll={scrollXY}
         {...tableConfig}
       />
-    </>
+    </ConfigProvider>
   );
 };
 

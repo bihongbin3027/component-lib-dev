@@ -8,7 +8,7 @@ module.exports = {
   usageMode: 'expand', // 自动打开文档的缩放
   pagePerSection: true, // 是否每页一个组件显示
   styleguideDir: 'dist_docs', // 打包的目录
-  components: 'components/**/*.tsx', // 写入对应目录的文档
+  components: 'components/*/*.tsx', // 写入对应目录的文档
   exampleMode: 'expand', // 表示示例代码是否展开或者合上文档中代码示例的标签初始化状态，决定是否展开
   webpackConfig: require('./webpack.config'),
   propsParser: require('react-docgen-typescript').withCustomConfig('./tsconfig.json', {

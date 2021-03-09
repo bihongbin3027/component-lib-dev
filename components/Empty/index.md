@@ -1,3 +1,5 @@
 ```js
-<EmptyResult outerHeight={200} description="暂无数据" />
+import React from 'react';
+
+<EmptyResult outerHeight={200} />;
 ```

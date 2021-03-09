@@ -1,5 +1,5 @@
 ```js
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import { Row, Col, Button } from 'antd';
 
 const formRef = useRef(null);
@@ -150,15 +150,21 @@ const manualSet = () => {
     ]}
   />
   <pre />
-  <Row gutter={15}>
+  <Row gutter={10}>
     <Col>
-      <Button onClick={submit}>提交表单</Button>
+      <Button type="primary" onClick={submit}>
+        提交表单
+      </Button>
     </Col>
     <Col>
-      <Button onClick={reset}>表单重置</Button>
+      <Button type="primary" onClick={reset}>
+        表单重置
+      </Button>
     </Col>
     <Col>
-      <Button onClick={manualSet}>手动设置name=a的表单值</Button>
+      <Button type="primary" onClick={manualSet}>
+        手动设置name=a的表单值
+      </Button>
     </Col>
   </Row>
 </>;

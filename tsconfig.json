@@ -5,6 +5,7 @@
     "declarationDir": "./lib",
     "module": "esnext",
     "target": "es5",
+    "downlevelIteration": true,
     "lib": [
       "dom",
       "es2015.core",
@@ -23,16 +24,6 @@
     "jsx": "react",
     "isolatedModules": false,
     "moduleResolution": "node",
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noImplicitAny": false,
-    "strictNullChecks": true,
-    "suppressImplicitAnyIndexErrors": true,
-    "allowSyntheticDefaultImports": true,
-    "noUnusedLocals": false,
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
     "esModuleInterop": true
   },
   "include": [

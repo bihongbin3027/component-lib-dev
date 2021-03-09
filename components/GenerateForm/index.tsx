@@ -22,7 +22,6 @@ import {
   TreeSelect,
 } from 'antd';
 import moment from 'moment';
-import locale from 'antd/es/date-picker/locale/zh_CN';
 import { RowProps } from 'antd/es/row';
 import { ColProps } from 'antd/es/col';
 import { FormProps, Rule } from 'antd/es/form';
@@ -32,8 +31,9 @@ import { FieldData } from 'rc-field-form/es/interface';
 import { DatePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
 import _ from 'lodash';
-import useSetState from '../hooks/useSetState';
-import { AnyObjectType, SelectType } from '../typings';
+import useSetState from '../unrelated/hooks/useSetState';
+import ConfigProvider from '../unrelated/ConfigProvider';
+import { AnyObjectType, SelectType } from '../unrelated/typings';
 import './index.less';
 
 type remoteValueType = string | undefined;
@@ -296,6 +296,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
             <Select
               allowClear
               showSearch
+              placeholder={item.placeholder}
               optionFilterProp="children"
               filterOption={(input, option) =>
                 option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
@@ -369,7 +370,6 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         case 'DatePicker':
           childForm = (
             <DatePicker
-              locale={locale}
               disabled={item.disabled}
               placeholder={item.placeholder}
               {...item.datePickerConfig}
@@ -378,11 +378,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           break;
         case 'RangePicker':
           childForm = (
-            <RangePicker
-              locale={locale}
-              disabled={item.disabled}
-              placeholder={item.rangePickerPlaceholder}
-            />
+            <RangePicker disabled={item.disabled} placeholder={item.rangePickerPlaceholder} />
           );
           break;
         case 'Switch':
@@ -593,21 +589,23 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   }));
 
   return (
-    <Form
-      name={uid}
-      className={`generate-form ${className ? className : ''}`}
-      form={form}
-      {...formConfig}
-    >
-      <Row {...rowGridConfig}>
-        {formRender()}
-        {render ? (
-          <Col>
-            <Form.Item>{render && render()}</Form.Item>
-          </Col>
-        ) : null}
-      </Row>
-    </Form>
+    <ConfigProvider>
+      <Form
+        name={uid}
+        className={`generate-form ${className ? className : ''}`}
+        form={form}
+        {...formConfig}
+      >
+        <Row {...rowGridConfig}>
+          {formRender()}
+          {render ? (
+            <Col>
+              <Form.Item>{render && render()}</Form.Item>
+            </Col>
+          ) : null}
+        </Row>
+      </Form>
+    </ConfigProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Empty, Row } from 'antd';
 import { EmptyProps } from 'antd/lib/empty';
+import ConfigProvider from '../unrelated/ConfigProvider';
 import './index.less';
 
 type Props = EmptyProps & {
@@ -14,16 +15,18 @@ function EmptyResult(props?: Props) {
   delete params.outerHeight;
 
   return (
-    <Row
-      className="empty-wrap"
-      style={{
-        minHeight: props && props.outerHeight ? props.outerHeight : 500,
-      }}
-      align="middle"
-      justify="center"
-    >
-      <Empty {...params} />
-    </Row>
+    <ConfigProvider>
+      <Row
+        className="empty-wrap"
+        style={{
+          minHeight: props && props.outerHeight ? props.outerHeight : 400,
+        }}
+        align="middle"
+        justify="center"
+      >
+        <Empty {...params} />
+      </Row>
+    </ConfigProvider>
   );
 }
 

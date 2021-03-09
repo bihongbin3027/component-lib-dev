@@ -1,5 +1,5 @@
 ```js
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import axios from 'axios';
 import { Button, Space, Typography, Divider } from 'antd';
 
@@ -76,16 +76,21 @@ const loadList = () => {
   <pre />
   <pre />
   <h3>带api请求表格</h3>
-  <Button onClick={loadList}>加载数据</Button>
+  <Button type="primary" onClick={loadList}>
+    加载数据
+  </Button>
   <pre />
   <GenerateTable
     ref={tableRef}
+    rowType="checkbox"
     columns={[
       {
+        width: 200,
         title: 'Name',
         dataIndex: 'name',
       },
       {
+        width: 200,
         title: 'Gender',
         dataIndex: 'gender',
         filters: [
@@ -94,6 +99,7 @@ const loadList = () => {
         ],
       },
       {
+        width: 200,
         title: 'Email',
         dataIndex: 'email',
       },
@@ -109,51 +115,61 @@ const loadList = () => {
               data: {
                 content: [
                   {
+                    id: 1,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 2,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 3,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 4,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 5,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 6,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 7,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 8,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 9,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
                   {
+                    id: 10,
                     name: 'Tita da Costa',
                     gender: 'female',
                     email: 'tita.dacosta@example.com',

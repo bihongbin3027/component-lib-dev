@@ -1,0 +1,19 @@
+.tree-wrap {
+  .tree-search {
+    margin-bottom: 10px;
+  }
+  .tree-handle-box {
+    display: flex;
+    align-items: center;
+    margin-right: 5px;
+    visibility: hidden;
+  }
+  .ant-tree-node-content-wrapper {
+    &:hover,
+    &.ant-tree-node-selected {
+      .tree-handle-box {
+        visibility: visible;
+      }
+    }
+  }
+}

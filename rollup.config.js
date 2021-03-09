@@ -7,7 +7,7 @@ import { terser } from 'rollup-plugin-terser';
 import typescript from 'rollup-plugin-typescript2';
 import { DEFAULT_EXTENSIONS } from '@babel/core';
 
-const antdVars = require('./antd-vars.json')
+const antdVars = require('./antd-vars.json');
 
 const isProd = process.env.NODE_ENV === 'production';
 
