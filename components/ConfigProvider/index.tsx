@@ -1,15 +1,8 @@
-/**
- * A prop that should not be visible in the documentation.
- *
- * @ignore
- */
-
 import React from 'react';
 import { ConfigProvider as ConfigProviderAntd } from 'antd';
 import 'moment/locale/zh-cn';
 import zhCN from 'antd/lib/locale/zh_CN';
 import moment from 'moment';
-import Empty from '../../Empty';
 
 interface PropTypes {
   children: React.ReactNode;
@@ -20,11 +13,7 @@ moment.locale('zh-cn', {
 });
 
 const ConfigProvider = (props: PropTypes) => {
-  return (
-    <ConfigProviderAntd locale={zhCN} renderEmpty={() => <Empty />}>
-      {props.children}
-    </ConfigProviderAntd>
-  );
+  return <ConfigProviderAntd locale={zhCN}>{props.children}</ConfigProviderAntd>;
 };
 
 export default ConfigProvider;

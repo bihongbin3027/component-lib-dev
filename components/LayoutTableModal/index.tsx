@@ -5,9 +5,9 @@ import { Modal, Row, Col, Space, Button, message } from 'antd';
 import { TableProps, ColumnType } from 'antd/es/table';
 import GenerateForm, { FormListType, FormCallType } from '../GenerateForm';
 import GenerateTable, { TableCallType } from '../GenerateTable';
-import useSetState from '../unrelated/hooks/useSetState';
-import { dropDownMenuPushAll } from '../unrelated/utils';
-import { AnyObjectType, PromiseAxiosResultType } from '../unrelated/typings';
+import useSetState from '../../unrelated/hooks/useSetState';
+import { dropDownMenuPushAll } from '../../unrelated/utils';
+import { AnyObjectType, PromiseAxiosResultType } from '../../unrelated/typings';
 import './index.less';
 
 export interface LayoutTableModalCallType {

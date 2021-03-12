@@ -1,4 +1,5 @@
 // -- APPEND ITEMS HERE --
+export { default as GaoDeMap } from './GaoDeMap';
 export { default as Upload } from './Upload';
 export { default as TreeNode } from './TreeNode';
 export { default as LayoutTableModal } from './LayoutTableModal';

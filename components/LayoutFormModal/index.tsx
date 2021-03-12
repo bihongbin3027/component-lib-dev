@@ -5,8 +5,8 @@ import _ from 'lodash';
 import { FieldData } from 'rc-field-form/es/interface';
 import { FormProps } from 'antd/es/form';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
-import useSetState from '../unrelated/hooks/useSetState';
-import { AnyObjectType, SubmitApiType } from '../unrelated/typings';
+import useSetState from '../../unrelated/hooks/useSetState';
+import { AnyObjectType, SubmitApiType } from '../../unrelated/typings';
 import './index.less';
 
 export interface LayoutFormPropTypes {
@@ -172,7 +172,7 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
     setState({
       disabled: props.disable,
     });
-  }, [props.disable]);
+  }, [props.disable, setState]);
 
   /**
    * @Description 暴漏给父组件调用

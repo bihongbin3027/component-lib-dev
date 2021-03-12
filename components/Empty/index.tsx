@@ -1,7 +1,7 @@
 import React from 'react';
 import { Empty, Row } from 'antd';
 import { EmptyProps } from 'antd/lib/empty';
-import ConfigProvider from '../unrelated/ConfigProvider';
+import ConfigProvider from '../ConfigProvider';
 import './index.less';
 
 type Props = EmptyProps & {

@@ -31,9 +31,9 @@ import { FieldData } from 'rc-field-form/es/interface';
 import { DatePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
 import _ from 'lodash';
-import useSetState from '../unrelated/hooks/useSetState';
-import ConfigProvider from '../unrelated/ConfigProvider';
-import { AnyObjectType, SelectType } from '../unrelated/typings';
+import useSetState from '../../unrelated/hooks/useSetState';
+import ConfigProvider from '../ConfigProvider';
+import { AnyObjectType, SelectType } from '../../unrelated/typings';
 import './index.less';
 
 type remoteValueType = string | undefined;
