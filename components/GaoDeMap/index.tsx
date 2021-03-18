@@ -3,12 +3,12 @@
  * @Author bihongbin
  * @Date 2020-12-03 16:34:09
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-12 16:27:24
+ * @LastEditTime 2021-03-10 15:41:44
  */
 
 import React, { useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
 import { v4 as uuidV4 } from 'uuid';
-import useSetState from '../../unrelated/hooks/useSetState';
+import useSetState from '../unrelated/hooks/useSetState';
 import './index.less';
 
 declare const AMap: any;

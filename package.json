@@ -1,9 +1,9 @@
 {
   "name": "hlyc-components-web",
-  "version": "1.4.1",
+  "version": "1.4.6",
   "description": "华旅云创web端组件",
-  "main": "./lib/index.js",
-  "module": "./es/index.js",
+  "main": "./lib/index.main.js",
+  "module": "./lib/index.module.js",
   "typings": "./lib/index.d.ts",
   "scripts": {
     "format": "prettier --write \"components/**/*.{ts,tsx,js,less,md}\"",
@@ -14,8 +14,7 @@
     "pub": "npm run build && npm publish"
   },
   "files": [
-    "lib",
-    "es"
+    "lib"
   ],
   "author": "hbi",
   "license": "MIT",
@@ -25,7 +24,6 @@
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.0",
-    "rollup-plugin-copy": "^3.4.0",
     "rollup-plugin-postcss": "^4.0.0",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.30.0",
@@ -73,7 +71,6 @@
     "webpack": "^4.44.2"
   },
   "peerDependencies": {
-    "antd": "4.13.0",
     "react": ">=16.9.0",
     "react-dom": ">=16.9.0"
   }

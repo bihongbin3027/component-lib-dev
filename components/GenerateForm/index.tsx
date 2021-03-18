@@ -31,9 +31,9 @@ import { FieldData } from 'rc-field-form/es/interface';
 import { DatePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
 import _ from 'lodash';
-import useSetState from '../../unrelated/hooks/useSetState';
-import ConfigProvider from '../ConfigProvider';
-import { AnyObjectType, SelectType } from '../../unrelated/typings';
+import useSetState from '../unrelated/hooks/useSetState';
+import ConfigProvider from '../unrelated/ConfigProvider';
+import { AnyObjectType, SelectType } from '../unrelated/typings';
 import './index.less';
 
 type remoteValueType = string | undefined;
@@ -151,13 +151,20 @@ interface StateType {
 /** 动态表单组件 */
 function GenerateForm(props: GenerateFormProp, ref: any) {
   const [form] = Form.useForm();
-  let { className, formConfig, rowGridConfig, colGirdConfig, list, render } = props;
+  let { className, formConfig, rowGridConfig, colGirdConfig, render } = props;
   const remoteRef = useRef<StateType['remoteData']>({});
   const [state, setState] = useSetState<StateType>({
     update: false, // 取反值强制渲染dom
     remoteFetching: false, // 远程搜索loading
     remoteData: {}, // 远程搜索数据结果
   });
+
+  /**
+   * @Description 渲染的表单元素
+   * @Author bihongbin
+   * @Date 2021-03-16 09:35:24
+   */
+  const list = useMemo(() => [...props.list], [props.list]);
 
   /**
    * @Description 缓存生成的随机id

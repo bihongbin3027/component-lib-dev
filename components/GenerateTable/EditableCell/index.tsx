@@ -4,7 +4,7 @@ import moment from 'moment';
 import { Form, Input, Select, DatePicker, Spin } from 'antd';
 import { Rule } from 'rc-field-form/lib/interface';
 import { v4 as uuidV4 } from 'uuid';
-import { SelectType, AnyObjectType } from '../../../unrelated/typings';
+import { SelectType, AnyObjectType } from '../../unrelated/typings';
 
 const { Option } = Select;
 const EditableContext = React.createContext<any>(null);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Upload as UploadAntd, message } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { UploadChangeParam, UploadProps } from 'antd/es/upload';
-import { AnyObjectType } from '../../unrelated/typings';
+import { AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
 export type PropsType = {

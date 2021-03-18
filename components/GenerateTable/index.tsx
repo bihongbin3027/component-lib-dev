@@ -10,10 +10,10 @@ import React, {
 import _ from 'lodash';
 import { Table } from 'antd';
 import { TablePaginationConfig, TableProps, ColumnType } from 'antd/es/table';
-import ConfigProvider from '../ConfigProvider';
+import ConfigProvider from '../unrelated/ConfigProvider';
 import ResizableTitle from './ResizableTitle';
 import EditableCell, { EditableRow, EditableColumnsType } from './EditableCell';
-import { AnyObjectType, PromiseAxiosResultType } from '../../unrelated/typings';
+import { AnyObjectType, PromiseAxiosResultType } from '../unrelated/typings';
 import './index.less';
 
 // 导出表格头类型

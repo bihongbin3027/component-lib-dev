@@ -3,8 +3,8 @@ import { Modal, Row, Col, Button, Space, message } from 'antd';
 import moment from 'moment';
 import { LeftCircleFilled, RightCircleFilled } from '@ant-design/icons';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
-import useSetState from '../../unrelated/hooks/useSetState';
-import { AjaxResultType, AnyObjectType } from '../../unrelated/typings';
+import useSetState from '../unrelated/hooks/useSetState';
+import { AjaxResultType, AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
 export interface QuicklyProcessTypes {

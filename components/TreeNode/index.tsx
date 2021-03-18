@@ -2,9 +2,9 @@ import React, { useEffect, useCallback, useImperativeHandle, forwardRef } from '
 import { Tree, Input, Row, Col, Empty, Spin, message } from 'antd';
 import { TreeProps } from 'antd/es/tree';
 import _ from 'lodash';
-import ConfigProvider from '../ConfigProvider';
-import useSetState from '../../unrelated/hooks/useSetState';
-import { AnyObjectType } from '../../unrelated/typings';
+import ConfigProvider from '../unrelated/ConfigProvider';
+import useSetState from '../unrelated/hooks/useSetState';
+import { AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
 const { Search } = Input;
@@ -339,7 +339,7 @@ const TreeNode = (props: PropTypes, ref: any) => {
         };
       });
     },
-    [props, state.searchValue],
+    [props.processOpen, state.searchValue],
   );
 
   /**

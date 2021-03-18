@@ -5,8 +5,8 @@ import _ from 'lodash';
 import { FieldData } from 'rc-field-form/es/interface';
 import { FormProps } from 'antd/es/form';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
-import useSetState from '../../unrelated/hooks/useSetState';
-import { AnyObjectType, SubmitApiType } from '../../unrelated/typings';
+import useSetState from '../unrelated/hooks/useSetState';
+import { AnyObjectType, SubmitApiType } from '../unrelated/typings';
 import './index.less';
 
 export interface LayoutFormPropTypes {
@@ -69,7 +69,7 @@ interface StateType {
 /** 弹窗表单组件，支持多种表单类型，手动提交（设置onConfirm）和自动提交（设置submitApi）参数至服务器 */
 const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
   const formRef = useRef<FormCallType>(); // 表单实例
-  const [state, setState] = useSetState({
+  const [state, setState] = useSetState<StateType>({
     loading: false, // loading
     saveLoading: false, // 保存按钮loading
     disabled: false, // 表单是否可编辑，当不可编辑不能显示保存按钮
@@ -162,6 +162,19 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
       }
     }
   };
+
+  /**
+   * @Description 关闭弹窗，自动关闭loading
+   * @Author bihongbin
+   * @Date 2021-03-15 18:32:02
+   */
+  useEffect(() => {
+    if (props.visible === false) {
+      setState({
+        saveLoading: false,
+      });
+    }
+  }, [props.visible, setState]);
 
   /**
    * @Description 表单是否是禁用状态
