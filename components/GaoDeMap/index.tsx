@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2020-12-03 16:34:09
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-10 15:41:44
+ * @LastEditTime 2021-03-26 14:54:08
  */
 
 import React, { useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
@@ -56,6 +56,7 @@ interface StateType {
 /** 高德地图组件 */
 const GaoDeMap = (props: PropType, ref: any) => {
   const mapRef = useRef<any>(null);
+  const mapCenterLocRef = useRef<any>(null);
   const [state, setState] = useSetState<StateType>({
     searchValue: '', // 关键字
     selectedRow: undefined, // 当前搜索选中的地址
@@ -111,6 +112,12 @@ const GaoDeMap = (props: PropType, ref: any) => {
       );
       mapRef.current.setZoom(zoom ? zoom : 18); // 设置地图层级
       mapRef.current.setCenter(location); // 设置地图中心点
+    } else {
+      // 当地图实例不存在，记忆中心点和坐标
+      mapCenterLocRef.current = {
+        location,
+        zoom,
+      };
     }
   };
 
@@ -142,6 +149,10 @@ const GaoDeMap = (props: PropType, ref: any) => {
         resizeEnable: true, // 是否监控地图容器尺寸变化
         zoom: 11, // 初始地图级别
       });
+      if (mapCenterLocRef.current) {
+        // 使用记忆的中心点和坐标
+        setMapCenterLocation(mapCenterLocRef.current.location, mapCenterLocRef.current.zoom);
+      }
     };
     if (document.getElementById('lbs')) {
       loadMap();
@@ -157,6 +168,7 @@ const GaoDeMap = (props: PropType, ref: any) => {
       jsApi.id = 'lbs';
       document.head.appendChild(jsApi);
     }
+    console.log('加载高德地图');
     return () => {
       if (mapRef.current) {
         mapRef.current.destroy(); // 销毁地图实例

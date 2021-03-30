@@ -1,6 +1,6 @@
 {
   "name": "hlyc-components-web",
-  "version": "1.4.6",
+  "version": "1.5.2",
   "description": "华旅云创web端组件",
   "main": "./lib/index.main.js",
   "module": "./lib/index.module.js",

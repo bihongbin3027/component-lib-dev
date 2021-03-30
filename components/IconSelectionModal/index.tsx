@@ -164,10 +164,11 @@ const IconSelectionModal = (props: Props) => {
    * @Date 2020-08-18 17:34:47
    */
   const handleIconSave = () => {
-    if (state.iconModal.selected === -1) {
-      message.warn('请选择图标', 1.5);
-      return;
-    }
+    // 暂时不做限制
+    // if (state.iconModal.selected === -1) {
+    //   message.warn('请选择图标', 1.5);
+    //   return;
+    // }
     const item = state.iconModal.list[state.iconModal.selected];
     if (props.onConfirm) {
       props.onConfirm(item);

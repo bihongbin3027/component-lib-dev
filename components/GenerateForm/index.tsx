@@ -20,15 +20,17 @@ import {
   Radio,
   Checkbox,
   TreeSelect,
+  Rate,
 } from 'antd';
 import moment from 'moment';
 import { RowProps } from 'antd/es/row';
 import { ColProps } from 'antd/es/col';
-import { FormProps, Rule } from 'antd/es/form';
+import { FormProps, Rule, FormItemProps } from 'antd/es/form';
+import { RateProps } from 'antd/lib/rate';
 import { DataNode } from 'rc-tree-select/es/interface';
 import { CascaderOption } from 'rc-cascader/es/Cascader';
 import { FieldData } from 'rc-field-form/es/interface';
-import { DatePickerProps } from 'antd/es/date-picker';
+import { DatePickerProps, RangePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
 import _ from 'lodash';
 import useSetState from '../unrelated/hooks/useSetState';
@@ -47,7 +49,7 @@ interface UnionType {
 }
 
 // 表单参数配置
-export interface FormListType {
+export type FormListType = {
   colProps?: ColProps; // 用来控制单个表单元素宽度
   visible?: boolean; // 用来控制显示隐藏
   // 组件显示类型
@@ -66,7 +68,8 @@ export interface FormListType {
     | 'Checkbox'
     | 'TreeSelect'
     | 'Union'
-    | 'RegionSelection';
+    | 'RegionSelection'
+    | 'Rate';
   name?: string; // 字段名
   label?: string | React.ReactNode; // 标题
   dependencies?: (string | number)[]; // 依赖字段
@@ -90,6 +93,7 @@ export interface FormListType {
       | 'color';
   };
   datePickerConfig?: DatePickerProps; // datePicker 可选类型
+  rangePickerConfig?: RangePickerProps; // RangePicker 可选类型
   unionConfig?: {
     // 要显示n个表单的类型
     unionItems: UnionType[];
@@ -104,13 +108,15 @@ export interface FormListType {
     loadData: CascaderOption[]; // 级联数据
     selectLoad?: (parentId: string) => Promise<CascaderOption[]>;
   };
+  // 评分
+  rateConfig?: RateProps;
   rows?: number; // TextArea高度
   rules?: Rule[]; // 表单验证
   selectIsHideAll?: boolean; // 下拉菜单是否显示“全部”选项 true-隐藏下拉菜单全部选项
   selectData?: SelectType[]; // 下拉菜单数据
   treeSelectData?: DataNode[]; // 树下拉菜单数据
   render?: () => React.ReactElement; // 动态渲染插入额外元素
-}
+} & FormItemProps;
 
 // 导出该组件可调用的方法类型
 export interface FormCallType {
@@ -385,7 +391,11 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           break;
         case 'RangePicker':
           childForm = (
-            <RangePicker disabled={item.disabled} placeholder={item.rangePickerPlaceholder} />
+            <RangePicker
+              disabled={item.disabled}
+              placeholder={item.rangePickerPlaceholder}
+              {...item.rangePickerConfig}
+            />
           );
           break;
         case 'Switch':
@@ -478,6 +488,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
             />
           );
           break;
+        case 'Rate':
+          childForm = <Rate disabled={item.disabled} {...item.rateConfig} />;
+          break;
         default:
           return null;
       }
@@ -491,6 +504,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'selectData',
         'inputConfig',
         'datePickerConfig',
+        'rangePickerConfig',
         'unionConfig',
         'remoteConfig',
         'regionSelectionConfig',
@@ -499,6 +513,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'rangePickerPlaceholder',
         'visible',
         'selectIsHideAll',
+        'rateConfig',
       ]);
       // Form.Item内有多个表单（Union类型），如果有设置name移除name
       if (item.componentName === 'Union') {

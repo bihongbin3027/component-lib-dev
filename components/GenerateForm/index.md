@@ -107,7 +107,7 @@ const manualSet = () => {
         componentName: 'RangePicker',
         name: 'h',
         label: '时间范围选择器',
-        placeholder: '请选择时间',
+        rangePickerConfig: { showTime: true },
       },
       {
         componentName: 'Radio',
@@ -146,6 +146,11 @@ const manualSet = () => {
         placeholder: '请输入内容',
         rows: 3,
         colProps: { span: 24 },
+      },
+      {
+        componentName: 'Rate',
+        name: 'k',
+        label: '评分',
       },
     ]}
   />
