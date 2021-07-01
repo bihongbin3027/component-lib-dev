@@ -1,11 +1,12 @@
-import React, { useRef, useReducer, useEffect, useImperativeHandle, forwardRef } from 'react';
-import { Modal, Spin, Row, Col, Button, Space, message } from 'antd';
+import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import { Spin, Row, Col, Button, Space, message } from 'antd';
 import moment from 'moment';
 import _ from 'lodash';
 import { FieldData } from 'rc-field-form/es/interface';
 import { FormProps } from 'antd/es/form';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
 import useSetState from '../unrelated/hooks/useSetState';
+import Dialog from '../Dialog';
 import { AnyObjectType, SubmitApiType } from '../unrelated/typings';
 import './index.less';
 
@@ -232,7 +233,7 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
   }));
 
   return (
-    <Modal
+    <Dialog
       className="form-modal"
       width={props.width ? props.width : 600}
       visible={props.visible}
@@ -274,7 +275,7 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
           </Row>
         )}
       </Spin>
-    </Modal>
+    </Dialog>
   );
 };
 

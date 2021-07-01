@@ -25,11 +25,12 @@ export interface TableCallType {
   setRowSelected: (selectedRowKeys: string[]) => void;
   getTableList: (values?: AnyObjectType, callBack?: () => void) => void;
   getSelectIds: () => string[];
+  removeSelectIds: (data: string[]) => void;
   getSelectRowsArray: () => AnyObjectType[];
   getStaticDataList: () => AnyObjectType[];
 }
 
-type ScrollXYType = {
+export type ScrollXYType = {
   x?: string | number | true | undefined;
   y?: string | number | undefined;
 };
@@ -74,7 +75,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
   // 表格横向纵向滚动条
   const [scrollXY, setScrollXY] = useState<ScrollXYType>({
     x: 'max-content',
-    y: 500,
+    y: 315,
   });
 
   /**
@@ -98,9 +99,9 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
       }
       try {
         const queryParams: AnyObjectType = {
-          ...queryParameters.current,
           page: queryPagination.current.current,
           size: queryPagination.current.pageSize,
+          ...queryParameters.current,
         };
         // 查询时，分页重置到第一页
         if (values && values.current) {
@@ -115,6 +116,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
           if (_.isArray(result.data.content)) {
             if (updateSelected) {
               let rowIds: string[] = [];
+              let rowData: AnyObjectType[] = [];
               // 递归
               const deepTable = (list: AnyObjectType[]) => {
                 if (selectRowIds.length) {
@@ -124,11 +126,13 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
                         if (typeof tableConfig.rowKey === 'string') {
                           if (item[tableConfig.rowKey] === ids) {
                             rowIds.push(ids);
+                            rowData.push(item);
                           }
                         }
                       } else {
                         if (item.id === ids) {
                           rowIds.push(ids);
+                          rowData.push(item);
                         }
                       }
                     }
@@ -140,6 +144,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
               };
               deepTable(result.data.content);
               setSelectRowIds(rowIds);
+              setSelectRowArray(rowData);
             }
             setListData(result.data.content);
           }
@@ -171,13 +176,52 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
       type: rowType,
       selectedRowKeys: selectRowIds,
       getCheckboxProps: props.getCheckboxProps,
-      onChange(selectedRowKeys: any[], selectedRows: AnyObjectType[]) {
-        setSelectRowIds(selectedRowKeys);
-        setSelectRowArray(selectedRows);
-        props.onSelect && props.onSelect(selectedRows, selectedRowKeys);
+      onSelectAll: (selected, selectedRows, changeRows) => {
+        let ids = [...selectRowIds];
+        let rows = [...selectRowArray];
+        if (selected) {
+          ids = _.uniq([...ids, ...changeRows.map((item) => item.id)]);
+          rows = _.uniqBy([...rows, ...changeRows], 'id');
+        } else {
+          for (let i of ids) {
+            if (!changeRows.some((item) => item.id === i)) {
+              ids.push(i);
+            }
+          }
+          for (let i of rows) {
+            if (!changeRows.some((item) => item.id === i.id)) {
+              rows.push(i);
+            }
+          }
+        }
+        setSelectRowIds(ids);
+        setSelectRowArray(rows);
+        props.onSelect && props.onSelect(rows, ids);
+      },
+      onSelect: (record, selected) => {
+        let ids = [...selectRowIds];
+        let rows = [...selectRowArray];
+        if (rowType === 'checkbox') {
+          if (selected) {
+            ids.push(record.id);
+            rows.push(record);
+          } else {
+            ids = ids.filter((item) => item !== record.id);
+            rows = rows.filter((item) => item.id !== record.id);
+          }
+        }
+        if (rowType === 'radio') {
+          if (selected) {
+            ids = [record.id];
+            rows = [record];
+          }
+        }
+        setSelectRowIds(ids);
+        setSelectRowArray(rows);
+        props.onSelect && props.onSelect(rows, ids);
       },
     }),
-    [props, rowType, selectRowIds],
+    [props, rowType, selectRowArray, selectRowIds],
   );
 
   /**
@@ -221,7 +265,24 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
    * @Date 2020-07-21 09:31:16
    */
   useEffect(() => {
-    let columns = props.columns;
+    let columns = [...props.columns];
+    // 添加序号
+    if (!columns.some((item) => item.dataIndex === 'sequence')) {
+      columns.unshift({
+        width: 50,
+        fixed: 'left',
+        title: '序号',
+        dataIndex: 'sequence',
+        render: (text, record, index) => {
+          const pages = queryPagination.current;
+          if (Object.keys(pages).length) {
+            return (pages.current - 1) * pages.pageSize + index + 1;
+          } else {
+            return index + 1;
+          }
+        },
+      });
+    }
     columns = columns.map((col: AnyObjectType, index) => {
       let obj: AnyObjectType = {
         ...col,
@@ -231,12 +292,13 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
         }),
       };
       if (col.editable) {
-        obj.onCell = (record: AnyObjectType) => ({
+        obj.onCell = (record: AnyObjectType, i: number) => ({
           record,
-          editable: col.editable,
+          editable: typeof col.editable === 'function' ? col.editable(record, i) : col.editable,
           inputType: col.inputType,
           valueType: col.valueType,
           valueEnum: col.valueEnum,
+          recordSelectField: col.recordSelectField,
           formChange: col.formChange,
           remoteConfig: col.remoteConfig,
           formItemProps: col.formItemProps,
@@ -279,7 +341,9 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
       }
     };
     deepTable(listData);
-    setSelectRowArray(rows);
+    setSelectRowArray((prev) => {
+      return _.unionBy([...prev, ...rows], (tableConfig && tableConfig.rowKey) || 'id');
+    });
   }, [listData, selectRowIds, tableConfig]);
 
   /**
@@ -299,8 +363,17 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
    * @Date 2020-06-28 10:33:20
    */
   useEffect(() => {
+    const sliderMenu = document.getElementById('slider-menu');
     if (scroll?.x || scroll?.y) {
       setScrollXY((prev) => ({ ...prev, ...scroll }));
+    } else {
+      // 计算宽度 body.width - 左侧边栏宽度 - 右侧内容区padding*2
+      if (sliderMenu) {
+        setScrollXY((prev) => {
+          prev.x = document.body.clientWidth - sliderMenu.clientWidth - 77;
+          return prev;
+        });
+      }
     }
   }, [listData, scroll]);
 
@@ -310,14 +383,10 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
     setTableLoading: (data) => {
       setListLoading(data);
     },
-    // 设置表格选中行
-    setRowSelected: (selectedRowKeys) => {
-      setSelectRowIds(selectedRowKeys);
-    },
     // 调用接口获取表格数据
     getTableList: async (values, callback) => {
       // 重置分页
-      if (values) {
+      if (values && values.current === undefined) {
         values.current = 1;
       }
       await getList(values);
@@ -326,7 +395,11 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
         callback();
       }
     },
-    // 表格选中的id
+    // 设置表格选中行
+    setRowSelected: (selectedRowKeys) => {
+      setSelectRowIds(selectedRowKeys);
+    },
+    // 获取表格选中的id
     getSelectIds: () =>
       selectRowArray.map((item) => {
         if (tableConfig && tableConfig.rowKey) {
@@ -339,8 +412,35 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
           return item.id;
         }
       }),
-    // 表格选中的数组对象
+    // 获取表格选中的数组对象
     getSelectRowsArray: () => selectRowArray,
+    // 移除表格选中的id和项
+    removeSelectIds: (data) => {
+      setSelectRowIds((prev) => {
+        return prev.filter((item) => {
+          let bool = true;
+          for (let i of data) {
+            if (i === item) {
+              bool = false;
+              break;
+            }
+          }
+          return bool;
+        });
+      });
+      setSelectRowArray((prev) => {
+        return prev.filter((item) => {
+          let bool = true;
+          for (let i of data) {
+            if (i === item.id) {
+              bool = false;
+              break;
+            }
+          }
+          return bool;
+        });
+      });
+    },
     // 获取表格所有数据
     getStaticDataList: () => listData,
   }));
@@ -349,7 +449,7 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
     <ConfigProvider>
       <Table
         rowKey="id"
-        rowClassName={() => 'editable-row'}
+        rowClassName="editable-row"
         loading={listLoading}
         bordered
         components={{

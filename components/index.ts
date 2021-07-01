@@ -1,4 +1,6 @@
 // -- APPEND ITEMS HERE --
+export { default as Affix } from './Affix';
+export { default as Dialog } from './Dialog';
 export { default as GaoDeMap } from './GaoDeMap';
 export { default as Upload } from './Upload';
 export { default as TreeNode } from './TreeNode';

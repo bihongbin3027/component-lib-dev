@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2021-03-01 14:22:57
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-08 17:25:10
+ * @LastEditTime 2021-03-30 17:23:27
  */
 
 import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
@@ -158,7 +158,7 @@ function ButtonGroup(props: ButtonGroupTypeProps, ref: any) {
         data: data,
       });
     }
-  }, [props]);
+  }, [props, setState]);
 
   /**
    * @Description 暴漏方法给父组件调用

@@ -13,13 +13,14 @@ type remoteValueType = string | undefined;
 type remotePromiseType = (value: remoteValueType) => Promise<SelectType[]>;
 
 export interface EditableColumnsType {
-  editable: boolean;
+  editable: boolean | ((record: AnyObjectType, index: number) => boolean);
   inputType: 'number';
   /** 单元格表单类型 */
-  valueType: 'Select' | 'DatePicker' | 'RemoteSearch';
+  valueType: 'Select' | 'AutoComplete' | 'RemoteSearch' | 'RecordSelect' | 'DatePicker';
   valueEnum: SelectType[];
+  recordSelectField: string;
   /** 表单值改变触发 */
-  formChange: (record: AnyObjectType) => AnyObjectType;
+  formChange: (record: AnyObjectType) => AnyObjectType | void;
   remoteConfig: {
     /** 远程搜索的api */
     remoteApi: remotePromiseType;
@@ -46,7 +47,7 @@ export const EditableRow: React.FC = (props, func) => {
   const [uuId] = useState(uuidV4());
 
   return (
-    <Form name={uuId} form={form} component={false}>
+    <Form size="small" component={false} name={uuId} form={form}>
       <EditableContext.Provider value={form}>
         <tr {...props} />
       </EditableContext.Provider>
@@ -61,6 +62,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   inputType,
   valueType,
   valueEnum,
+  recordSelectField,
   formChange,
   remoteConfig,
   formItemProps,
@@ -70,7 +72,6 @@ const EditableCell: React.FC<EditableCellProps> = ({
   handleSave,
   ...restProps
 }) => {
-  const inputRef = useRef<any>();
   const form = useContext(EditableContext);
   // 远程搜索loading
   const [remoteFetching, setRemoteFetching] = useState(false);
@@ -104,7 +105,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   if (editable) {
     let val = record[dataIndex];
     // 如果是时间类型，转换
-    if (moment(val, 'YYYY-MM-DD', true).isValid()) {
+    if (valueType === 'DatePicker') {
       val = moment(val);
     }
     setTimeout(() => {
@@ -117,22 +118,58 @@ const EditableCell: React.FC<EditableCellProps> = ({
   // 显示不同类型的表单
   const filterFormType = (type: EditableCellProps['valueType'], title: string) => {
     let node: React.ReactNode = null;
+    // 渲染option
+    const optionNode = (data) => {
+      if (_.isArray(data)) {
+        return data.map((m: SelectType, i: number) => (
+          <Option key={i} value={m.value}>
+            {m.label}
+          </Option>
+        ));
+      }
+    };
     switch (type) {
+      case 'RecordSelect':
+        node = (
+          <Select
+            allowClear
+            showSearch
+            placeholder={title}
+            onChange={save}
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
+            }
+          >
+            {optionNode(record[recordSelectField])}
+          </Select>
+        );
+        break;
       case 'Select':
         node = (
-          <Select ref={inputRef} onSelect={save} placeholder={title}>
-            {_.isArray(valueEnum)
-              ? valueEnum.map((m, i) => (
-                  <Option key={i} value={m.value}>
-                    {m.label}
-                  </Option>
-                ))
-              : null}
+          <Select onChange={save} placeholder={title}>
+            {optionNode(valueEnum)}
           </Select>
         );
         break;
       case 'DatePicker':
-        node = <DatePicker ref={inputRef} onChange={save} placeholder={title} />;
+        node = <DatePicker onChange={save} placeholder={title} />;
+        break;
+      case 'AutoComplete':
+        node = (
+          <Select
+            allowClear
+            showSearch
+            placeholder={title}
+            onChange={save}
+            optionFilterProp="children"
+            filterOption={(input, option) =>
+              option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
+            }
+          >
+            {optionNode(valueEnum)}
+          </Select>
+        );
         break;
       case 'RemoteSearch':
         node = (
@@ -143,24 +180,18 @@ const EditableCell: React.FC<EditableCellProps> = ({
             filterOption={false}
             allowClear
             showSearch
+            onChange={save}
             // 当获取焦点查询全部
             onFocus={() => fetchRemote(undefined, dataIndex, remoteConfig.remoteApi)}
             onSearch={(value) => fetchRemote(value, dataIndex, remoteConfig.remoteApi)}
           >
-            {dataIndex && remoteData[dataIndex]
-              ? remoteData[dataIndex].map((s: SelectType, k) => (
-                  <Option value={s.value} key={k}>
-                    {s.label}
-                  </Option>
-                ))
-              : null}
+            {dataIndex && optionNode(remoteData[dataIndex])}
           </Select>
         );
         break;
       default:
         node = (
           <Input
-            ref={inputRef}
             onPressEnter={save}
             onBlur={save}
             placeholder={title}
@@ -184,7 +215,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         }
       }
       if (formChange) {
-        data = formChange(data); // 单元格值改变触发
+        data = (await formChange(data)) || data; // 单元格值改变触发
       }
       handleSave(data);
     } catch (errInfo) {

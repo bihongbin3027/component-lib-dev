@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2020-12-03 16:34:09
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-26 14:54:08
+ * @LastEditTime 2021-05-17 13:48:29
  */
 
 import React, { useEffect, useMemo, useRef, forwardRef, useImperativeHandle } from 'react';
@@ -89,7 +89,8 @@ const GaoDeMap = (props: PropType, ref: any) => {
       autoComplete.search(e.target.value, (status: any, result: any) => {
         if (result.info === 'OK') {
           setState({
-            searchResultList: result.tips,
+            // 数据过滤，找出存在经纬度的
+            searchResultList: result.tips.filter((k: any) => k.location !== undefined),
           });
         }
       });
@@ -127,15 +128,17 @@ const GaoDeMap = (props: PropType, ref: any) => {
    * @Date 2020-12-03 17:54:53
    */
   const selectedKeyWord = (item: MapType) => {
+    if (item.location) {
+      setMapCenterLocation([item.location.lng, item.location.lat]);
+      setState({
+        selectedRow: item, // 保存当前选中项
+        searchValue: `${item.district}${item.name}`,
+        searchResultList: [],
+      });
+    }
     if (props.onChange) {
       props.onChange(item);
     }
-    setMapCenterLocation([item.location.lng, item.location.lat]);
-    setState({
-      selectedRow: item, // 保存当前选中项
-      searchValue: `${item.district}${item.name}`,
-      searchResultList: [],
-    });
   };
 
   /**

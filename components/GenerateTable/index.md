@@ -1,11 +1,11 @@
 ```js
-import React, { useRef } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import axios from 'axios';
-import { Button, Space, Typography, Divider } from 'antd';
+import { Button, Space, Typography, Divider, Input } from 'antd';
+import { FormOutlined } from '@ant-design/icons';
 
 const tableRef = useRef(null);
-
-const data = [
+const [data, setData] = useState([
   {
     id: 1,
     a: '小明',
@@ -14,8 +14,61 @@ const data = [
     d: '170cm',
     e: '60kg',
     f: '泡妞',
+    g: '2021-06-10',
+    h: '1',
+    ss: [
+      { label: '小花', value: '1' },
+      { label: '小海', value: '2' },
+    ],
   },
-];
+  {
+    id: 2,
+    a: '小明',
+    b: '男',
+    c: '15岁',
+    d: '170cm',
+    e: '60kg',
+    f: '泡妞',
+    g: '2021-06-11',
+    h: undefined,
+    ss: [],
+  },
+]);
+
+// 规格项价格表格头一键设置值
+const getColumnSearchProps = (dataIndex) => ({
+  filterIcon: () => <FormOutlined />,
+  filterDropdown: ({ setSelectedKeys, selectedKeys, confirm }) => (
+    <div style={{ padding: 8 }}>
+      <Space>
+        <Input
+          size="small"
+          type="number"
+          placeholder="统一设置的值"
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          style={{ width: '108px' }}
+        />
+        <Button
+          type="primary"
+          size="small"
+          onClick={() => {
+            confirm();
+            setData(
+              data.map((item) => {
+                let val = Number(selectedKeys[0]);
+                item[dataIndex] = val ? val : '';
+                return item;
+              }),
+            );
+          }}
+        >
+          确定
+        </Button>
+      </Space>
+    </div>
+  ),
+});
 
 const loadList = () => {
   if (tableRef.current) {
@@ -37,16 +90,30 @@ const loadList = () => {
         width: 85,
         title: '性别',
         dataIndex: 'b',
+        editable: (record) => {
+          return record.id === 2;
+        },
       },
-      {
-        width: 85,
-        title: '年龄',
-        dataIndex: 'c',
-      },
+      Object.assign(
+        {
+          width: 85,
+          title: '年龄',
+          dataIndex: 'c',
+          editable: true, // 打开可编辑功能
+        },
+        getColumnSearchProps('c'),
+      ),
       {
         width: 85,
         title: '身高',
         dataIndex: 'd',
+      },
+      {
+        width: 85,
+        title: '出生日期',
+        dataIndex: 'g',
+        editable: true,
+        valueType: 'DatePicker',
       },
       {
         width: 85,
@@ -57,6 +124,20 @@ const loadList = () => {
         width: 85,
         title: '个人爱好',
         dataIndex: 'f',
+        editable: true,
+        valueType: 'AutoComplete',
+        valueEnum: [
+          { label: '泡妞', value: '0' },
+          { label: '学习', value: '1' },
+        ],
+      },
+      {
+        width: 85,
+        title: '暗恋对象',
+        dataIndex: 'h',
+        editable: true,
+        valueType: 'RecordSelect',
+        recordSelectField: 'ss',
       },
       {
         width: 100,
@@ -174,7 +255,10 @@ const loadList = () => {
                     gender: 'female',
                     email: 'tita.dacosta@example.com',
                   },
-                ],
+                ].map((item, index) => {
+                  item.id = (params.page - 1) * params.size + index + 1;
+                  return item;
+                }),
                 total: 20,
               },
             });

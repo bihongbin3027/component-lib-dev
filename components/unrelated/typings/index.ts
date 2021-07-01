@@ -1,4 +1,5 @@
 import { AxiosRequestConfig } from 'axios';
+import React from 'react';
 
 // 从类型 T 中排除是 K 的类型
 export type Omit<T, K> = Pick<T, Exclude<keyof T, K>>;
@@ -33,7 +34,7 @@ export type ResultPageType<T = any[]> = {
 };
 
 export interface SelectType {
-  label: string;
+  label: string | React.ReactNode;
   value: string | number;
   children?: SelectType[];
 }

@@ -2,49 +2,24 @@
 
 .ant-table-wrapper {
   .ant-table-thead {
-    tr {
-      th {
-        padding-top: 10px;
-        padding-bottom: 10px;
-        font-weight: bold;
-      }
+    > tr > th {
+      font-weight: bold;
     }
-  }
-  /* 表格可编辑 */
-  .editable-row {
-    &:hover {
-      .editable-cell-value-wrap {
-        visibility: visible;
-      }
-    }
-    .editable-cell-value-wrap {
-      min-height: 32px;
-      padding: 4px 11px;
-      padding-right: 11px !important;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      border: 1px solid #d9d9d9;
-      border-radius: @border-radius-base;
-      visibility: hidden;
-    }
-  }
-  /* 默认显示表格编辑input */
-  &.table-input-block {
-    .editable-row {
-      .editable-cell-value-wrap {
-        visibility: visible;
-      }
-    }
-  }
-  .ant-table-thead {
     > tr > td,
     > tr > th {
-      padding: 8px;
+      padding: 6px 8px;
     }
   }
   .ant-table-tbody {
     > tr > td {
-      padding: 8px;
+      padding: 6px 8px;
+      &.ant-table-cell {
+        .ant-form-item {
+          .ant-form-item-control-input {
+            min-height: auto;
+          }
+        }
+      }
     }
     .btn-operate {
       width: 26px;

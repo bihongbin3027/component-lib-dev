@@ -1,19 +1,21 @@
 import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import moment from 'moment';
 import _ from 'lodash';
-import { Modal, Row, Col, Space, Button, message } from 'antd';
+import { Row, Col, Space, Button, message } from 'antd';
 import { TableProps, ColumnType } from 'antd/es/table';
+import { FormProps } from 'antd/es/form';
 import GenerateForm, { FormListType, FormCallType } from '../GenerateForm';
 import GenerateTable, { TableCallType } from '../GenerateTable';
 import useSetState from '../unrelated/hooks/useSetState';
+import Dialog from '../Dialog';
 import { dropDownMenuPushAll } from '../unrelated/utils';
 import { AnyObjectType, PromiseAxiosResultType } from '../unrelated/typings';
 import './index.less';
 
-export interface LayoutTableModalCallType {
-  setSavaLoading: (data: boolean) => void;
-  LayoutTableListRef: () => TableCallType | undefined;
-}
+export type LayoutTableModalCallType = TableCallType &
+  FormCallType & {
+    setSavaLoading: (data: boolean) => void;
+  };
 
 export interface SizeType {
   xs?: number; // 屏幕 < 576px 响应式栅格
@@ -31,8 +33,12 @@ export interface LayoutTableModalPropType {
   title: React.ReactNode;
   /** 弹窗宽度 */
   width?: number;
+  /* 头部渲染额外元素 */
+  topExtra?: React.ReactNode;
   /** 搜索表单数据 */
   searchFormList?: FormListType[];
+  /** 表单方法 */
+  formConfig?: FormProps;
   /** rowType=checkbox多选 radio单选 list=表格头 tableConfig=自定义配置，支持antd官方表格所有参数*/
   tableColumnsList: {
     /** checkbox多选 radio单选 */
@@ -133,6 +139,9 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
           }
         })
         .catch((err) => {
+          setState({
+            saveLoading: false,
+          });
           message.warn(err, 1.5);
         });
     }
@@ -166,18 +175,20 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
 
   // 暴漏给父组件调用
   useImperativeHandle<any, LayoutTableModalCallType>(ref, () => ({
+    // 搜索表单方法
+    ...searchFormRef.current,
+    // 表格实例对象方法
+    ...tableRef.current,
     // 设置保存loading
     setSavaLoading: (data) => {
       setState({
         saveLoading: data,
       });
     },
-    // 表格实例对象方法
-    LayoutTableListRef: () => tableRef.current,
   }));
 
   return (
-    <Modal
+    <Dialog
       className="from-table-modal"
       width={props.width}
       visible={props.visible}
@@ -187,12 +198,13 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
       maskClosable={false}
       footer={null}
     >
+      {props.topExtra}
       {props.searchFormList ? (
         <GenerateForm
-          className="search-form"
           ref={searchFormRef}
           rowGridConfig={{ gutter: 10 }}
           list={dropDownMenuPushAll(props.searchFormList)}
+          formConfig={props.formConfig}
           render={() => {
             if (props.searchFormList && props.searchFormList.length) {
               return (
@@ -216,6 +228,9 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
         apiMethod={props.apiMethod}
         columns={props.tableColumnsList.list}
         data={props.data}
+        scroll={{
+          x: 'max-content',
+        }}
         tableConfig={props.tableColumnsList.tableConfig}
       />
       <Row className="from-table-modal-foot" justify="center">
@@ -228,7 +243,7 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
           </Space>
         </Col>
       </Row>
-    </Modal>
+    </Dialog>
   );
 }
 

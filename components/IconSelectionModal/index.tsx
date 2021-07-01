@@ -1,6 +1,7 @@
 import React from 'react';
+import { Row, Col, Button, Space, message } from 'antd';
 import useSetState from '../unrelated/hooks/useSetState';
-import { Modal, Row, Col, Button, Space, message } from 'antd';
+import Dialog from '../Dialog';
 import './index.less';
 
 interface Props {
@@ -176,7 +177,7 @@ const IconSelectionModal = (props: Props) => {
   };
 
   return (
-    <Modal
+    <Dialog
       className="icon-selected-modal"
       width={props.width ? props.width : 590}
       visible={props.visible}
@@ -215,7 +216,7 @@ const IconSelectionModal = (props: Props) => {
           </Space>
         </Col>
       </Row>
-    </Modal>
+    </Dialog>
   );
 };
 

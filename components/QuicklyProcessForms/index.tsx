@@ -1,9 +1,10 @@
 import React, { useRef, useMemo, useEffect, useCallback } from 'react';
-import { Modal, Row, Col, Button, Space, message } from 'antd';
+import { Row, Col, Button, Space, message } from 'antd';
 import moment from 'moment';
 import { LeftCircleFilled, RightCircleFilled } from '@ant-design/icons';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
 import useSetState from '../unrelated/hooks/useSetState';
+import Dialog from '../Dialog';
 import { AjaxResultType, AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
@@ -237,7 +238,7 @@ const QuicklyProcessForms = (props: QuicklyProcessTypes) => {
   }, [keyDown, props.visible]);
 
   return (
-    <Modal
+    <Dialog
       className="quickly-form-modal"
       width={props.width ? props.width : 960}
       visible={props.visible}
@@ -284,7 +285,7 @@ const QuicklyProcessForms = (props: QuicklyProcessTypes) => {
           </Space>
         </Col>
       </Row>
-    </Modal>
+    </Dialog>
   );
 };
 

@@ -57,7 +57,7 @@ const manualSet = () => {
     list={[
       {
         componentName: 'Input',
-        name: 'a',
+        name: 'sortSeq',
         label: '输入框',
         placeholder: '请输入内容',
         rules: [{ required: true, message: '请输入内容' }], // 表单验证
@@ -90,7 +90,7 @@ const manualSet = () => {
         placeholder: '请选择',
         remoteConfig: {
           remoteApi: (val) => {
-            console.log('触发ajax请求');
+            console.log('下拉框（远程搜索）触发ajax请求', val);
             return new Promise((resolve, reject) => {
               resolve(selectData);
             });
@@ -98,8 +98,46 @@ const manualSet = () => {
         },
       },
       {
+        componentName: 'TreeSelect',
+        name: 'f1',
+        label: '下拉树选择',
+        placeholder: '请选择',
+        treeSelectConfig: {
+          data: {
+            title: 'a',
+            value: 'b',
+            onChange: (value, formItem) => {
+              console.log('value', value);
+              formItem.name = 'dt';
+              return formItem;
+            },
+            api: () => {
+              console.log('下拉树选择触发');
+              return new Promise((resolve, reject) => {
+                resolve([
+                  {
+                    a: 'Node1',
+                    b: '0-0',
+                    children: [
+                      {
+                        a: 'Child Node1',
+                        b: '0-0-1',
+                      },
+                    ],
+                  },
+                  {
+                    a: 'Node2',
+                    b: '0-1',
+                  },
+                ]);
+              });
+            },
+          },
+        },
+      },
+      {
         componentName: 'DatePicker',
-        name: 'g',
+        name: 'startTime',
         label: '时间选择器',
         placeholder: '请选择时间',
       },
@@ -122,19 +160,39 @@ const manualSet = () => {
         selectData: selectData,
       },
       {
-        label: '多个input值',
         componentName: 'Union',
+        label: '价格',
+        name: 'a',
+        rules: [{ required: true }],
         unionConfig: {
           unionItems: [
             {
-              componentName: 'Input',
-              name: 'saleRealMin',
-              placeholder: '销量',
+              componentName: 'RemoteSearch',
+              name: 'a11',
+              placeholder: '价格',
+              remoteConfig: {
+                remoteApi: (val) => {
+                  console.log('下拉框（远程搜索）触发ajax请求', val);
+                  return new Promise((resolve, reject) => {
+                    resolve(selectData);
+                  });
+                },
+              },
+              rules: [{ required: true, message: '请输入价格' }],
             },
             {
-              componentName: 'Input',
-              name: 'saleRealMax',
-              placeholder: '销量',
+              componentName: 'RemoteSearch',
+              name: 'b11',
+              placeholder: '价格',
+              remoteConfig: {
+                remoteApi: (val) => {
+                  console.log('下拉框（远程搜索）触发ajax请求', val);
+                  return new Promise((resolve, reject) => {
+                    resolve(selectData);
+                  });
+                },
+              },
+              rules: [{ required: true, message: '请输入价格' }],
             },
           ],
         },

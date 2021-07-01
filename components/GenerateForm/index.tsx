@@ -23,16 +23,18 @@ import {
   Rate,
 } from 'antd';
 import moment from 'moment';
+import _ from 'lodash';
 import { RowProps } from 'antd/es/row';
 import { ColProps } from 'antd/es/col';
 import { FormProps, Rule, FormItemProps } from 'antd/es/form';
 import { RateProps } from 'antd/lib/rate';
-import { DataNode } from 'rc-tree-select/es/interface';
+import { TreeSelectProps } from 'antd/lib/tree-select';
+import { SelectProps } from 'antd/lib/select';
+import { DataNode, DefaultValueType } from 'rc-tree-select/es/interface';
 import { CascaderOption } from 'rc-cascader/es/Cascader';
 import { FieldData } from 'rc-field-form/es/interface';
 import { DatePickerProps, RangePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
-import _ from 'lodash';
 import useSetState from '../unrelated/hooks/useSetState';
 import ConfigProvider from '../unrelated/ConfigProvider';
 import { AnyObjectType, SelectType } from '../unrelated/typings';
@@ -42,10 +44,12 @@ type remoteValueType = string | undefined;
 type remotePromiseType = (value: remoteValueType) => Promise<SelectType[]>;
 
 interface UnionType {
-  componentName: 'Input' | 'Select' | 'DatePicker';
+  componentName: 'Input' | 'Select' | 'DatePicker' | 'RemoteSearch';
   name: string; // 字段名
   placeholder?: string;
   selectData?: SelectType[];
+  remoteConfig?: FormListType['remoteConfig'];
+  rules?: Rule[]; // 表单验证
 }
 
 // 表单参数配置
@@ -76,6 +80,7 @@ export type FormListType = {
   placeholder?: string;
   rangePickerPlaceholder?: [string, string]; // 开始时间和结束时间提示文字
   disabled?: boolean; // 是否禁用
+  maxLength?: number; // 可输入长度
   valuePropName?: string; // 子节点的值的属性，如 Switch 的是 'checked'
   inputConfig?: {
     prefix?: string | React.ReactNode; // 带有前缀图标的 input
@@ -99,9 +104,13 @@ export type FormListType = {
     unionItems: UnionType[];
     divide?: string; // 分隔符
   };
+  selectConfig?: SelectProps<string>;
   remoteConfig?: {
+    initLoad?: false; // 是否默认加载 false（不加载）
     remoteApi: remotePromiseType; // 远程搜索的api
     remoteMode?: 'multiple' | 'tags'; // 远程搜索模式为多选或标签
+    allowClear?: boolean; // 是否可清除内容
+    showSearch?: boolean; // 使单选模式可搜索
   };
   // 级联选择
   regionSelectionConfig?: {
@@ -110,11 +119,21 @@ export type FormListType = {
   };
   // 评分
   rateConfig?: RateProps;
+  // 树选择
+  treeSelectConfig?: {
+    data?: {
+      title: string;
+      value: string;
+      children?: string;
+      api: (value?: string) => Promise<AnyObjectType[]>;
+      onChange?: (value: DataNode[], formItem: FormListType) => FormListType | void;
+    };
+    extra?: TreeSelectProps<DefaultValueType>;
+  };
   rows?: number; // TextArea高度
   rules?: Rule[]; // 表单验证
   selectIsHideAll?: boolean; // 下拉菜单是否显示“全部”选项 true-隐藏下拉菜单全部选项
   selectData?: SelectType[]; // 下拉菜单数据
-  treeSelectData?: DataNode[]; // 树下拉菜单数据
   render?: () => React.ReactElement; // 动态渲染插入额外元素
 } & FormItemProps;
 
@@ -124,7 +143,7 @@ export interface FormCallType {
   formSetFields: (fields: FieldData[]) => void;
   formSetValues: (values: AnyObjectType) => void;
   formSubmit: () => Promise<AnyObjectType>;
-  formReset: () => void;
+  formReset: (fields?: string[]) => void;
 }
 
 // 组件传参配置props
@@ -152,6 +171,12 @@ interface StateType {
   remoteData: {
     [key: string]: SelectType[];
   };
+  treeSelectData: {
+    [key: string]: DataNode[];
+  };
+  treeSelectFlattenData: {
+    [key: string]: DataNode[];
+  };
 }
 
 /** 动态表单组件 */
@@ -159,10 +184,13 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   const [form] = Form.useForm();
   let { className, formConfig, rowGridConfig, colGirdConfig, render } = props;
   const remoteRef = useRef<StateType['remoteData']>({});
+  const treeSelectRef = useRef<StateType['treeSelectData']>({});
   const [state, setState] = useSetState<StateType>({
     update: false, // 取反值强制渲染dom
     remoteFetching: false, // 远程搜索loading
     remoteData: {}, // 远程搜索数据结果
+    treeSelectData: {}, // 树选择数据
+    treeSelectFlattenData: {}, // 树选择打平后数据
   });
 
   /**
@@ -170,7 +198,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
    * @Author bihongbin
    * @Date 2021-03-16 09:35:24
    */
-  const list = useMemo(() => [...props.list], [props.list]);
+  let list = useMemo(() => [...props.list], [props.list]);
 
   /**
    * @Description 缓存生成的随机id
@@ -180,31 +208,75 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   const uid = useMemo(() => uuidV4(), []);
 
   /**
-   * @Description 远程数据搜索
+   * @Description 下拉菜单远程数据查询
    * @Author bihongbin
    * @Date 2020-07-25 10:01:02
    */
   const fetchRemote = useCallback(
-    (value: remoteValueType, fieldName: string | undefined, remoteApi?: remotePromiseType) => {
-      if (remoteApi) {
+    (value: remoteValueType, item: FormListType) => {
+      const config = item.remoteConfig;
+      let current = remoteRef.current[item.name];
+      if (config && config.remoteApi) {
         setState({
           remoteFetching: true,
         });
-        if (fieldName) {
-          remoteRef.current[fieldName] = []; // 优化，防止fetchRemote被多次加载
+        if (current === undefined) {
+          remoteRef.current[item.name] = [];
         }
-        remoteApi(value).then((res) => {
+        config.remoteApi(value).then((res) => {
           setState({
             remoteFetching: false,
           });
-          if (fieldName) {
+          if (item.name) {
             setState((prev) => {
-              prev.remoteData[fieldName] = res;
+              remoteRef.current[item.name] = res;
+              prev.remoteData[item.name] = res;
               return prev;
             });
           }
         });
       }
+    },
+    [setState],
+  );
+
+  /**
+   * @Description 树选择查询
+   * @Author bihongbin
+   * @Date 2021-04-17 10:03:36
+   * @param {*} useCallback
+   */
+  const fetchTreeSelect = useCallback(
+    (item: FormListType, value?: string) => {
+      const config = item.treeSelectConfig;
+      config.data.api(value).then((res) => {
+        if (item.name) {
+          treeSelectRef.current[item.name] = [];
+          let transformTreeSelect: DataNode[] = [];
+          let flattenTreeSelect: DataNode[] = [];
+          // 递归
+          const deep = (original: AnyObjectType[], rear: DataNode[]) => {
+            for (let [i, e] of original.entries()) {
+              const children = config.data.children || 'children';
+              rear[i] = {};
+              rear[i].title = e[config.data.title];
+              rear[i].value = e[config.data.value];
+              rear[i].key = rear[i].value;
+              flattenTreeSelect.push(e); // 添加打平数据
+              if (Array.isArray(e[children])) {
+                rear[i].children = [];
+                deep(e[children], rear[i].children);
+              }
+            }
+          };
+          deep(res, transformTreeSelect);
+          setState((prev) => {
+            prev.treeSelectData[item.name] = transformTreeSelect;
+            prev.treeSelectFlattenData[item.name] = flattenTreeSelect;
+            return prev;
+          });
+        }
+      });
     },
     [setState],
   );
@@ -248,203 +320,339 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
     if (!list) {
       return;
     }
+    // Input
+    const inputRender = (item: FormListType) => {
+      return (
+        <Input
+          disabled={item.disabled}
+          type={item.inputConfig?.inputMode ? item.inputConfig?.inputMode : 'text'}
+          maxLength={item.maxLength}
+          prefix={item.inputConfig?.prefix ? item.inputConfig?.prefix : null}
+          suffix={item.inputConfig?.suffix ? item.inputConfig?.suffix : null}
+          placeholder={item.placeholder}
+        />
+      );
+    };
+    // HideInput
+    const hideInputRender = (item: FormListType) => {
+      return (
+        <Input
+          style={{ display: 'none' }}
+          maxLength={item.maxLength}
+          disabled={item.disabled}
+          type="text"
+          placeholder={item.placeholder}
+        />
+      );
+    };
+    // TextArea
+    const textAreaRender = (item: FormListType) => {
+      return (
+        <Input.TextArea
+          rows={item.rows}
+          disabled={item.disabled}
+          maxLength={item.maxLength}
+          placeholder={item.placeholder}
+        />
+      );
+    };
+    // AutoComplete
+    const autoCompleteRender = (item: FormListType) => {
+      return (
+        <Select
+          allowClear
+          showSearch
+          disabled={item.disabled}
+          placeholder={item.placeholder}
+          optionFilterProp="children"
+          maxLength={item.maxLength}
+          filterOption={(input, option) =>
+            option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
+          }
+          {...item.selectConfig}
+        >
+          {item.selectData
+            ? item.selectData.map((s, k) => (
+                <Option value={s.value} key={k}>
+                  {s.label}
+                </Option>
+              ))
+            : null}
+        </Select>
+      );
+    };
+    // Select
+    const selectRender = (item: FormListType) => {
+      return (
+        <Select
+          disabled={item.disabled}
+          maxLength={item.maxLength}
+          placeholder={item.placeholder}
+          {...item.selectConfig}
+        >
+          {item.selectData
+            ? item.selectData.map((s, k) => (
+                <Option value={s.value} key={k}>
+                  {s.label}
+                </Option>
+              ))
+            : null}
+        </Select>
+      );
+    };
+    // Multiple
+    const multipleRender = (item: FormListType) => {
+      return (
+        <Select
+          mode="multiple"
+          allowClear
+          maxLength={item.maxLength}
+          disabled={item.disabled}
+          placeholder={item.placeholder}
+          maxTagCount="responsive"
+          {...item.selectConfig}
+        >
+          {item.selectData
+            ? item.selectData.map((s, k) => (
+                <Option value={s.value} key={k}>
+                  {s.label}
+                </Option>
+              ))
+            : null}
+        </Select>
+      );
+    };
+    // RemoteSearch
+    const remoteSearchRender = (item: FormListType) => {
+      const remoteConfig = item.remoteConfig;
+      const isMode = remoteConfig && remoteConfig.remoteMode;
+      const allowClear = remoteConfig && remoteConfig.allowClear;
+      const showSearch = remoteConfig && remoteConfig.showSearch;
+      return (
+        <Select
+          mode={isMode || undefined}
+          disabled={item.disabled}
+          placeholder={item.placeholder}
+          notFoundContent={state.remoteFetching ? <Spin size="small" /> : null}
+          filterOption={false}
+          maxLength={item.maxLength}
+          allowClear={allowClear === false ? false : true}
+          showSearch={showSearch === false ? false : true}
+          // 当获取焦点查询全部
+          onFocus={() => fetchRemote(undefined, item)}
+          onSearch={_.debounce(
+            showSearch === false ? undefined : (value) => fetchRemote(value, item),
+            300,
+          )}
+          {...item.selectConfig}
+        >
+          {item.name && state.remoteData[item.name]
+            ? state.remoteData[item.name].map((s: SelectType, k) => (
+                <Option value={s.value} key={k}>
+                  {s.label}
+                </Option>
+              ))
+            : null}
+        </Select>
+      );
+    };
+    // DatePicker
+    const datePickerRender = (item: FormListType) => {
+      return (
+        <DatePicker
+          disabled={item.disabled}
+          placeholder={item.placeholder}
+          {...item.datePickerConfig}
+        />
+      );
+    };
+    // RangePicker
+    const rangePickerRender = (item: FormListType) => {
+      return (
+        <RangePicker
+          disabled={item.disabled}
+          placeholder={item.rangePickerPlaceholder}
+          {...item.rangePickerConfig}
+        />
+      );
+    };
+    // Switch
+    const switchRender = (item: FormListType) => {
+      return (
+        <Switch
+          defaultChecked={false}
+          checkedChildren="ON"
+          unCheckedChildren="OFF"
+          disabled={item.disabled}
+        />
+      );
+    };
+    // Radio
+    const radioRender = (item: FormListType) => {
+      return (
+        <Radio.Group>
+          {item.selectData
+            ? item.selectData.map((s: SelectType, k) => (
+                <Radio disabled={item.disabled} value={s.value} key={k}>
+                  {s.label}
+                </Radio>
+              ))
+            : null}
+        </Radio.Group>
+      );
+    };
+    // Checkbox
+    const checkboxRender = (item: FormListType) => {
+      return (
+        <Checkbox.Group>
+          {item.selectData
+            ? item.selectData.map((s: SelectType, k) => (
+                <Checkbox disabled={item.disabled} value={s.value} key={k}>
+                  {s.label}
+                </Checkbox>
+              ))
+            : null}
+        </Checkbox.Group>
+      );
+    };
+    // TreeSelect
+    const treeSelectRender = (item: FormListType, index: number) => {
+      return (
+        <TreeSelect
+          disabled={item.disabled}
+          style={{ width: '100%' }}
+          dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
+          treeData={state.treeSelectData[item.name]}
+          placeholder={item.placeholder}
+          maxLength={item.maxLength}
+          onChange={(value) => {
+            const treeSelectConfig = item.treeSelectConfig;
+            if (treeSelectConfig && treeSelectConfig.data) {
+              const onChange = item.treeSelectConfig.data.onChange;
+              const flatten = state.treeSelectFlattenData[item.name];
+              const type = Object.prototype.toString.call(value);
+              let changeChild = [];
+              if (type === '[object String]') {
+                changeChild = flatten.filter((t) => t[item.treeSelectConfig.data.value] === value);
+              }
+              if (type === '[object Array]' && Array.isArray(value)) {
+                for (let i = flatten.length; i--; ) {
+                  if (value.some((t) => t === flatten[i][item.treeSelectConfig.data.value])) {
+                    changeChild.push(flatten[i]);
+                  }
+                }
+              }
+              let newItem = onChange(changeChild, { ...item });
+              if (newItem) {
+                list[index] = newItem;
+                form.setFieldsValue({
+                  [newItem.name]: value, // 设置对应字段值
+                });
+                fetchTreeSelect(newItem); // 查询树选择数据
+              }
+            }
+          }}
+          treeDefaultExpandAll
+          {...item.treeSelectConfig.extra}
+        />
+      );
+    };
+    // RegionSelection
+    const regionSelectionRender = (item: FormListType) => {
+      const propsRegionConfig = item.regionSelectionConfig;
+      return (
+        <Cascader
+          disabled={item.disabled}
+          placeholder={item.placeholder}
+          options={(propsRegionConfig && propsRegionConfig.loadData) || []}
+          loadData={(selectedOptions) => regionLoadData(item, selectedOptions)}
+          changeOnSelect
+        />
+      );
+    };
+    // Rate
+    const rateRender = (item: FormListType) => {
+      return <Rate disabled={item.disabled} {...item.rateConfig} />;
+    };
     // 渲染Union类型表单
-    const unionRender = (item: FormListType, m: UnionType) => {
+    const unionRender = (m: UnionType) => {
       if (m.componentName === 'Input') {
-        return <Input disabled={item.disabled} placeholder={m.placeholder} />;
+        return inputRender(m);
       }
       if (m.componentName === 'Select') {
-        return (
-          <Select disabled={item.disabled} placeholder={m.placeholder}>
-            {m.selectData
-              ? m.selectData.map((s: SelectType, k: number) => (
-                  <Option value={s.value} key={k}>
-                    {s.label}
-                  </Option>
-                ))
-              : null}
-          </Select>
-        );
+        return selectRender(m);
       }
       if (m.componentName === 'DatePicker') {
-        return <DatePicker disabled={item.disabled} placeholder={m.placeholder} />;
+        return datePickerRender(m);
+      }
+      if (m.componentName === 'RemoteSearch') {
+        return remoteSearchRender(m);
       }
       return null;
+    };
+    // 类型是Union，有rule，添加必选项*号
+    const unionRuleStyle = (i: Partial<FormListType>) => {
+      let node = i.label;
+      if (i.componentName === 'Union' && i.rules) {
+        node = (
+          <span>
+            <i
+              style={{
+                marginRight: 4,
+                color: '#ff4d4f',
+                fontStyle: 'normal',
+                fontFamily: 'SimSun, sans-serif',
+              }}
+            >
+              *
+            </i>
+            {i.label}
+          </span>
+        );
+      }
+      return node;
     };
     return list.map((item: FormListType, index: number) => {
       let childForm: React.ReactNode = null;
       switch (item.componentName) {
         case 'Input':
-          childForm = (
-            <Input
-              disabled={item.disabled}
-              type={item.inputConfig?.inputMode ? item.inputConfig?.inputMode : 'text'}
-              prefix={item.inputConfig?.prefix ? item.inputConfig?.prefix : null}
-              suffix={item.inputConfig?.suffix ? item.inputConfig?.suffix : null}
-              placeholder={item.placeholder}
-            />
-          );
+          childForm = inputRender(item);
           break;
         case 'HideInput':
-          childForm = (
-            <Input
-              style={{ display: 'none' }}
-              disabled={item.disabled}
-              type="text"
-              placeholder={item.placeholder}
-            />
-          );
+          childForm = hideInputRender(item);
           break;
         case 'TextArea':
-          childForm = (
-            <Input.TextArea
-              rows={item.rows}
-              disabled={item.disabled}
-              placeholder={item.placeholder}
-            />
-          );
+          childForm = textAreaRender(item);
           break;
         case 'AutoComplete':
-          childForm = (
-            <Select
-              allowClear
-              showSearch
-              placeholder={item.placeholder}
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
-              }
-            >
-              {item.selectData
-                ? item.selectData.map((s, k) => (
-                    <Option value={s.value} key={k}>
-                      {s.label}
-                    </Option>
-                  ))
-                : null}
-            </Select>
-          );
+          childForm = autoCompleteRender(item);
           break;
         case 'Select':
-          childForm = (
-            <Select disabled={item.disabled} placeholder={item.placeholder}>
-              {item.selectData
-                ? item.selectData.map((s, k) => (
-                    <Option value={s.value} key={k}>
-                      {s.label}
-                    </Option>
-                  ))
-                : null}
-            </Select>
-          );
+          childForm = selectRender(item);
           break;
         case 'Multiple':
-          childForm = (
-            <Select
-              mode="multiple"
-              allowClear
-              disabled={item.disabled}
-              placeholder={item.placeholder}
-            >
-              {item.selectData
-                ? item.selectData.map((s, k) => (
-                    <Option value={s.value} key={k}>
-                      {s.label}
-                    </Option>
-                  ))
-                : null}
-            </Select>
-          );
+          childForm = multipleRender(item);
           break;
         case 'RemoteSearch':
-          childForm = (
-            <Select
-              mode={item.remoteConfig?.remoteMode}
-              disabled={item.disabled}
-              placeholder={item.placeholder}
-              notFoundContent={state.remoteFetching ? <Spin size="small" /> : null}
-              filterOption={false}
-              allowClear
-              showSearch
-              // 当获取焦点查询全部
-              onFocus={() => fetchRemote(undefined, item.name, item.remoteConfig?.remoteApi)}
-              onSearch={(value) => fetchRemote(value, item.name, item.remoteConfig?.remoteApi)}
-            >
-              {item.name && state.remoteData[item.name]
-                ? state.remoteData[item.name].map((s: SelectType, k) => (
-                    <Option value={s.value} key={k}>
-                      {s.label}
-                    </Option>
-                  ))
-                : null}
-            </Select>
-          );
+          childForm = remoteSearchRender(item);
           break;
         case 'DatePicker':
-          childForm = (
-            <DatePicker
-              disabled={item.disabled}
-              placeholder={item.placeholder}
-              {...item.datePickerConfig}
-            />
-          );
+          childForm = datePickerRender(item);
           break;
         case 'RangePicker':
-          childForm = (
-            <RangePicker
-              disabled={item.disabled}
-              placeholder={item.rangePickerPlaceholder}
-              {...item.rangePickerConfig}
-            />
-          );
+          childForm = rangePickerRender(item);
           break;
         case 'Switch':
-          childForm = (
-            <Switch
-              defaultChecked={false}
-              checkedChildren="ON"
-              unCheckedChildren="OFF"
-              disabled={item.disabled}
-            />
-          );
+          childForm = switchRender(item);
           break;
         case 'Radio':
-          childForm = (
-            <Radio.Group>
-              {item.selectData
-                ? item.selectData.map((s: SelectType, k) => (
-                    <Radio disabled={item.disabled} value={s.value} key={k}>
-                      {s.label}
-                    </Radio>
-                  ))
-                : null}
-            </Radio.Group>
-          );
+          childForm = radioRender(item);
           break;
         case 'Checkbox':
-          childForm = (
-            <Checkbox.Group>
-              {item.selectData
-                ? item.selectData.map((s: SelectType, k) => (
-                    <Checkbox disabled={item.disabled} value={s.value} key={k}>
-                      {s.label}
-                    </Checkbox>
-                  ))
-                : null}
-            </Checkbox.Group>
-          );
+          childForm = checkboxRender(item);
           break;
         case 'TreeSelect':
-          childForm = (
-            <TreeSelect
-              disabled={item.disabled}
-              style={{ width: '100%' }}
-              dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-              treeData={item.treeSelectData}
-              placeholder={item.placeholder}
-              treeDefaultExpandAll
-            />
-          );
+          childForm = treeSelectRender(item, index);
           break;
         case 'Union':
           let width: string;
@@ -462,8 +670,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
                   }}
                   key={k}
                 >
-                  <Form.Item name={m.name} noStyle>
-                    {unionRender(item, m)}
+                  <Form.Item name={m.name} rules={m.rules} noStyle>
+                    {unionRender(m)}
                   </Form.Item>
                   {k < len - 1 ? (
                     <span className="divide">
@@ -477,19 +685,10 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           );
           break;
         case 'RegionSelection': // 级联选择（可实现地区选择）
-          const propsRegionConfig = item.regionSelectionConfig;
-          childForm = (
-            <Cascader
-              disabled={item.disabled}
-              placeholder={item.placeholder}
-              options={(propsRegionConfig && propsRegionConfig.loadData) || []}
-              loadData={(selectedOptions) => regionLoadData(item, selectedOptions)}
-              changeOnSelect
-            />
-          );
+          childForm = regionSelectionRender(item);
           break;
         case 'Rate':
-          childForm = <Rate disabled={item.disabled} {...item.rateConfig} />;
+          childForm = rateRender(item);
           break;
         default:
           return null;
@@ -497,6 +696,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       let resetItem: Partial<FormListType> = {
         ...item,
       };
+      // 类型是Union，有rule，添加必选项*号
+      resetItem.label = unionRuleStyle(resetItem);
       // 移除Form.Item不需要的属性
       resetItem = _.omit(resetItem, [
         'colProps',
@@ -507,7 +708,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'rangePickerConfig',
         'unionConfig',
         'remoteConfig',
+        'selectConfig',
         'regionSelectionConfig',
+        'treeSelectConfig',
         'rows',
         'render',
         'rangePickerPlaceholder',
@@ -526,7 +729,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       } else {
         grid = colGirdConfig;
       }
-      return !item.visible ? (
+      return item.visible === false ? null : (
         <Col {...grid} key={index}>
           <Form.Item
             className={item.componentName === 'HideInput' ? 'hide-item' : undefined}
@@ -536,12 +739,12 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           </Form.Item>
           {item.render && item.render()}
         </Col>
-      ) : null;
+      );
     });
   };
 
   /**
-   * @Description 设置全局表单默认值
+   * @Description 设置全局表单默认查询
    * @Author bihongbin
    * @Date 2020-10-14 14:25:54
    */
@@ -549,31 +752,30 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
     if (list) {
       let obj: AnyObjectType = {};
       for (let item of list) {
-        // 序号
-        if (item.name === 'sortSeq') {
-          obj[item.name] = 10;
-        }
-        // 生效时间
-        if (item.name === 'startTime') {
-          obj[item.name] = moment();
-        }
-        // 失效时间
-        if (item.name === 'endTime') {
-          obj[item.name] = moment('20991231');
-        }
         // 远程搜索默认查询
         if (item.componentName === 'RemoteSearch') {
-          // remoteRef.current[item.name]，优化，防止fetchRemote被多次加载
           if (item.name && !remoteRef.current[item.name]) {
-            if (item.remoteConfig && item.remoteConfig.remoteApi) {
-              fetchRemote(undefined, item.name, item.remoteConfig.remoteApi);
+            if (
+              item.remoteConfig &&
+              item.remoteConfig.remoteApi &&
+              item.remoteConfig.initLoad !== false
+            ) {
+              fetchRemote(undefined, item);
+            }
+          }
+        }
+        // 设置树数据
+        if (item.componentName === 'TreeSelect') {
+          if (item.name && !treeSelectRef.current[item.name]) {
+            if (item.treeSelectConfig && item.treeSelectConfig.data) {
+              fetchTreeSelect(item); // 查询树选择数据
             }
           }
         }
       }
       form.setFieldsValue(obj);
     }
-  }, [fetchRemote, form, list]);
+  }, [fetchRemote, fetchTreeSelect, form, list]);
 
   // 暴漏给父组件调用
   useImperativeHandle<any, FormCallType>(ref, () => ({
@@ -604,8 +806,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       });
     },
     // 重置表单
-    formReset: () => {
-      form.resetFields();
+    formReset: (fields) => {
+      form.resetFields(fields);
       return form.getFieldsValue();
     },
   }));
@@ -617,6 +819,12 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         className={`generate-form ${className ? className : ''}`}
         form={form}
         {...formConfig}
+        initialValues={{
+          sortSeq: 10,
+          startTime: moment(),
+          endTime: moment('20991231'),
+          ...(formConfig ? formConfig.initialValues : undefined),
+        }}
       >
         <Row {...rowGridConfig}>
           {formRender()}
