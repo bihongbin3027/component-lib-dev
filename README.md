@@ -58,16 +58,16 @@ npm run pub
 安装 npm 包
 
 ```
-yarn add hlyc-components-web
+yarn add hlyc-web-pack
 or
-npm install hlyc-components-web
+npm install hlyc-web-pack
 ```
 
 组件里使用
 
 ```
 import React from 'react';
-import { Empty } from 'hlyc-components-web'
+import { Empty } from 'hlyc-web-pack'
 
 function App() {
   return (
