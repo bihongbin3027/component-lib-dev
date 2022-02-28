@@ -14,6 +14,7 @@ const [state, setState] = useState(false);
   </Button>
   <Dialog
     visible={state}
+    height={300}
     title="弹窗"
     onCancel={() => {
       setState(false);
@@ -22,7 +23,16 @@ const [state, setState] = useState(false);
       setState(false);
     }}
   >
-    弹窗内容。。。
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
+    <p>弹窗内容。。。</p>
   </Dialog>
 </>;
 ```

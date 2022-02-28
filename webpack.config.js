@@ -7,7 +7,7 @@ module.exports = {
       {
         test: /\.(js|jsx|ts|tsx)?$/,
         loader: require.resolve('babel-loader'),
-        query: {
+        options: {
           cacheDirectory: true,
           plugins: [['import', { libraryName: 'antd', style: true }]],
         },

@@ -1,22 +1,22 @@
-import React, { useState, useRef, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import _ from 'lodash';
 import moment from 'moment';
 import { Form, Input, Select, DatePicker, Spin } from 'antd';
-import { Rule } from 'rc-field-form/lib/interface';
-import { v4 as uuidV4 } from 'uuid';
+import { InternalFieldProps } from 'rc-field-form/lib/Field';
 import { SelectType, AnyObjectType } from '../../unrelated/typings';
+import { typeofEqual, getSelectValue } from '../../unrelated/utils';
 
 const { Option } = Select;
 const EditableContext = React.createContext<any>(null);
 
 type remoteValueType = string | undefined;
-type remotePromiseType = (value: remoteValueType) => Promise<SelectType[]>;
+type remotePromiseType = (value: remoteValueType, record: AnyObjectType) => Promise<SelectType[]>;
 
 export interface EditableColumnsType {
   editable: boolean | ((record: AnyObjectType, index: number) => boolean);
   inputType: 'number';
   /** 单元格表单类型 */
-  valueType: 'Select' | 'AutoComplete' | 'RemoteSearch' | 'RecordSelect' | 'DatePicker';
+  valueType: 'Select' | 'AutoComplete' | 'RecordSelect' | 'RemoteSearch' | 'DatePicker';
   valueEnum: SelectType[];
   recordSelectField: string;
   /** 表单值改变触发 */
@@ -29,8 +29,10 @@ export interface EditableColumnsType {
   };
   /** 可编辑单元格表单验证 */
   formItemProps: {
-    rules: Rule[];
+    rules: InternalFieldProps['rules'];
   };
+  /** 自定义渲染值(在原有的内容上增加新的结构)，childNode是原有的内容 */
+  controlRender: (record: AnyObjectType, childNode: React.ReactNode) => React.ReactNode;
 }
 
 /** 可编辑单元格 */
@@ -39,15 +41,15 @@ type EditableCellProps = {
   children: React.ReactNode;
   dataIndex: string;
   record: AnyObjectType;
+  /** 保存表单的值 */
   handleSave: (record: AnyObjectType) => void;
 } & EditableColumnsType;
 
-export const EditableRow: React.FC = (props, func) => {
+export const EditableRow: React.FC = (props) => {
   const [form] = Form.useForm();
-  const [uuId] = useState(uuidV4());
 
   return (
-    <Form size="small" component={false} name={uuId} form={form}>
+    <Form size="small" component={false} form={form}>
       <EditableContext.Provider value={form}>
         <tr {...props} />
       </EditableContext.Provider>
@@ -57,18 +59,19 @@ export const EditableRow: React.FC = (props, func) => {
 
 /** 可编辑单元格 */
 const EditableCell: React.FC<EditableCellProps> = ({
+  record,
+  dataIndex,
   title,
   editable,
   inputType,
   valueType,
   valueEnum,
   recordSelectField,
+  controlRender,
   formChange,
   remoteConfig,
-  formItemProps,
   children,
-  dataIndex,
-  record,
+  formItemProps,
   handleSave,
   ...restProps
 }) => {
@@ -86,11 +89,12 @@ const EditableCell: React.FC<EditableCellProps> = ({
   const fetchRemote = (
     value: remoteValueType,
     fieldName: string | undefined,
+    record: AnyObjectType,
     remoteApi?: remotePromiseType,
   ) => {
     if (remoteApi) {
       setRemoteFetching(true);
-      remoteApi(value).then((res) => {
+      remoteApi(value, record).then((res) => {
         setRemoteFetching(false);
         if (fieldName) {
           setRemoteData({
@@ -106,8 +110,16 @@ const EditableCell: React.FC<EditableCellProps> = ({
     let val = record[dataIndex];
     // 如果是时间类型，转换
     if (valueType === 'DatePicker') {
-      val = moment(val);
+      if (val) {
+        val = moment(val);
+      }
     }
+
+    // 状态-转换为字符串
+    if (dataIndex === 'status' && val !== undefined) {
+      record[dataIndex] = String(val);
+    }
+
     setTimeout(() => {
       form.setFieldsValue({
         [dataIndex]: val,
@@ -118,6 +130,33 @@ const EditableCell: React.FC<EditableCellProps> = ({
   // 显示不同类型的表单
   const filterFormType = (type: EditableCellProps['valueType'], title: string) => {
     let node: React.ReactNode = null;
+    const filterOption = (input: string, option: any) => {
+      let str = '';
+      // 递归
+      const deep = function (o: any) {
+        for (let i of o) {
+          // 节点值可能为undefined或null
+          if (i) {
+            if (typeofEqual({ data: i, type: 'String' })) {
+              str += i;
+            } else {
+              const children = i.props.children;
+              if (typeofEqual({ data: children, type: 'Object' })) {
+                deep([children]);
+              }
+              if (typeofEqual({ data: children, type: 'Array' })) {
+                deep(children);
+              }
+              if (typeofEqual({ data: children, type: 'String' })) {
+                str += children;
+              }
+            }
+          }
+        }
+      };
+      deep([option.children]);
+      return str.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+    };
     // 渲染option
     const optionNode = (data) => {
       if (_.isArray(data)) {
@@ -134,12 +173,11 @@ const EditableCell: React.FC<EditableCellProps> = ({
           <Select
             allowClear
             showSearch
+            dropdownMatchSelectWidth={false}
             placeholder={title}
             onChange={save}
             optionFilterProp="children"
-            filterOption={(input, option) =>
-              option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
-            }
+            filterOption={filterOption}
           >
             {optionNode(record[recordSelectField])}
           </Select>
@@ -147,7 +185,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         break;
       case 'Select':
         node = (
-          <Select onChange={save} placeholder={title}>
+          <Select dropdownMatchSelectWidth={false} onChange={save} placeholder={title}>
             {optionNode(valueEnum)}
           </Select>
         );
@@ -160,12 +198,11 @@ const EditableCell: React.FC<EditableCellProps> = ({
           <Select
             allowClear
             showSearch
+            dropdownMatchSelectWidth={false}
             placeholder={title}
             onChange={save}
             optionFilterProp="children"
-            filterOption={(input, option) =>
-              option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
-            }
+            filterOption={filterOption}
           >
             {optionNode(valueEnum)}
           </Select>
@@ -177,13 +214,14 @@ const EditableCell: React.FC<EditableCellProps> = ({
             mode={remoteConfig.remoteMode}
             placeholder={title}
             notFoundContent={remoteFetching ? <Spin size="small" /> : null}
+            dropdownMatchSelectWidth={false}
             filterOption={false}
             allowClear
             showSearch
             onChange={save}
             // 当获取焦点查询全部
-            onFocus={() => fetchRemote(undefined, dataIndex, remoteConfig.remoteApi)}
-            onSearch={(value) => fetchRemote(value, dataIndex, remoteConfig.remoteApi)}
+            onFocus={() => fetchRemote(undefined, dataIndex, record, remoteConfig.remoteApi)}
+            onSearch={(value) => fetchRemote(value, dataIndex, record, remoteConfig.remoteApi)}
           >
             {dataIndex && optionNode(remoteData[dataIndex])}
           </Select>
@@ -234,6 +272,19 @@ const EditableCell: React.FC<EditableCellProps> = ({
         {filterFormType(valueType, title as string)}
       </Form.Item>
     );
+  } else {
+    if (valueType) {
+      if (valueEnum && (valueType === 'Select' || valueType === 'AutoComplete')) {
+        childNode = getSelectValue(valueEnum, record[dataIndex]);
+      }
+      if (record[recordSelectField] && valueType === 'RecordSelect') {
+        childNode = getSelectValue(record[recordSelectField], record[dataIndex]);
+      }
+    }
+  }
+
+  if (controlRender) {
+    childNode = controlRender(record, childNode);
   }
 
   return (

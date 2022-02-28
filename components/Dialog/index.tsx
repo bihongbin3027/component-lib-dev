@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import Draggable, { DraggableEvent, DraggableData } from 'react-draggable';
+// import isEqual from 'fast-deep-equal/react';
 import { Modal } from 'antd';
 import { ModalProps } from 'antd/es/modal';
 import './index.less';
@@ -8,6 +9,8 @@ import './index.less';
 let dialogIndex = 1;
 
 type PropType = ModalProps & {
+  /** 内容区域高度 */
+  height?: number;
   onOk?: (e?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
   onCancel?: (e?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
 };
@@ -23,7 +26,7 @@ interface StateType {
 }
 
 /** 弹窗组件 */
-export default class Dialog extends React.Component<PropType, StateType> {
+class Dialog extends React.Component<PropType, StateType> {
   static show(props: any): Dialog {
     let body = document.body;
     let host = document.createElement('div');
@@ -88,6 +91,11 @@ export default class Dialog extends React.Component<PropType, StateType> {
     });
   }
 
+  // shouldComponentUpdate(nextProps) {
+  //   console.log('nextProps', nextProps);
+  //   return !isEqual(this.props, nextProps);
+  // }
+
   render() {
     let props = this.props;
     let state = this.state;
@@ -95,6 +103,7 @@ export default class Dialog extends React.Component<PropType, StateType> {
     return (
       <Modal
         className="dialog"
+        maskClosable={false}
         {...props}
         title={
           <div
@@ -143,3 +152,5 @@ export default class Dialog extends React.Component<PropType, StateType> {
     }
   }
 }
+
+export default Dialog;

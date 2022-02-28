@@ -4,6 +4,7 @@ import { TreeProps } from 'antd/es/tree';
 import _ from 'lodash';
 import ConfigProvider from '../unrelated/ConfigProvider';
 import useSetState from '../unrelated/hooks/useSetState';
+import { isEqualWith } from '../unrelated/utils';
 import { AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
@@ -339,7 +340,7 @@ const TreeNode = (props: PropTypes, ref: any) => {
         };
       });
     },
-    [props.processOpen, state.searchValue],
+    [props, state.searchValue],
   );
 
   /**
@@ -511,4 +512,4 @@ const TreeNode = (props: PropTypes, ref: any) => {
   );
 };
 
-export default forwardRef(TreeNode);
+export default React.memo(forwardRef(TreeNode), isEqualWith);

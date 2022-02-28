@@ -1,7 +1,6 @@
 import React from 'react';
 import { Empty, Row } from 'antd';
 import { EmptyProps } from 'antd/lib/empty';
-import ConfigProvider from '../unrelated/ConfigProvider';
 import './index.less';
 
 type Props = EmptyProps & {
@@ -10,24 +9,22 @@ type Props = EmptyProps & {
 };
 
 /** 空状态，展示占位图 */
-function EmptyResult(props?: Props) {
+function Abc(props?: Props) {
   const params: Props = { ...props };
   delete params.outerHeight;
 
   return (
-    <ConfigProvider>
-      <Row
-        className="empty-wrap"
-        style={{
-          minHeight: props && props.outerHeight ? props.outerHeight : 400,
-        }}
-        align="middle"
-        justify="center"
-      >
-        <Empty {...params} />
-      </Row>
-    </ConfigProvider>
+    <Row
+      className="empty-wrap"
+      style={{
+        minHeight: props && props.outerHeight ? props.outerHeight : 400,
+      }}
+      align="middle"
+      justify="center"
+    >
+      <Empty description="暂无数据" {...params} />
+    </Row>
   );
 }
 
-export default React.memo(EmptyResult);
+export default React.memo(Abc);

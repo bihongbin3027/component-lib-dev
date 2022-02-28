@@ -3,12 +3,13 @@
  * @Author bihongbin
  * @Date 2021-03-01 14:22:57
  * @LastEditors bihongbin
- * @LastEditTime 2021-03-30 17:23:27
+ * @LastEditTime 2021-08-26 14:13:15
  */
 
 import React, { useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Row, Col } from 'antd';
 import { CloseOutlined } from '@ant-design/icons';
+import { isEqualWith } from '../unrelated/utils';
 import useSetState from '../unrelated/hooks/useSetState';
 import './index.less';
 
@@ -184,4 +185,4 @@ function ButtonGroup(props: ButtonGroupTypeProps, ref: any) {
   );
 }
 
-export default forwardRef(ButtonGroup);
+export default React.memo(forwardRef(ButtonGroup), isEqualWith);

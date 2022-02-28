@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload as UploadAntd, message } from 'antd';
 import { LoadingOutlined } from '@ant-design/icons';
 import { UploadChangeParam, UploadProps } from 'antd/es/upload';
+import { isEqualWith } from '../unrelated/utils';
 import { AnyObjectType } from '../unrelated/typings';
 import './index.less';
 
@@ -29,7 +30,7 @@ function Upload(props: PropsType) {
       let last = file.name.lastIndexOf('.');
       let name = file.name.substr(0, last);
       if (fileArr) {
-        resolve(new File([file], encodeURIComponent(name) + fileArr[0]));
+        resolve(new File([file], name + fileArr[0]));
       }
     });
   };
@@ -103,4 +104,4 @@ function Upload(props: PropsType) {
   );
 }
 
-export default Upload;
+export default React.memo(Upload, isEqualWith);

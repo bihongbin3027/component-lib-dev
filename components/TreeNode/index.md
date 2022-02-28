@@ -1,4 +1,8 @@
 ```js
+import { Typography } from 'antd';
+
+const { Link } = Typography;
+
 const treeData = [
   {
     id: 1,
@@ -47,6 +51,9 @@ const treeData = [
 <TreeNode
   processOpen
   data={treeData}
+  customAction={(item) => {
+    return <Link>删除</Link>;
+  }}
   // 启用api
   lockApi={(id) => {
     console.log('id', id);

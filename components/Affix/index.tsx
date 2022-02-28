@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2021-07-01 11:44:07
  * @LastEditors bihongbin
- * @LastEditTime 2021-07-01 16:06:08
+ * @LastEditTime 2021-08-26 10:47:05
  */
 import React from 'react';
 import { Affix } from 'antd';
@@ -32,4 +32,4 @@ const AffixBox = (props: PropType) => {
   );
 };
 
-export default AffixBox;
+export default React.memo(AffixBox);

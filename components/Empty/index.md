@@ -1,5 +1,3 @@
 ```js
-import React from 'react';
-
-<EmptyResult outerHeight={200} />;
+<Empty outerHeight={200} />
 ```

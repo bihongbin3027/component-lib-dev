@@ -2,10 +2,12 @@ import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react
 import { Spin, Row, Col, Button, Space, message } from 'antd';
 import moment from 'moment';
 import _ from 'lodash';
-import { FieldData } from 'rc-field-form/es/interface';
+import { FormInstance } from 'rc-field-form/es/interface';
 import { FormProps } from 'antd/es/form';
+import { ColProps } from 'antd/es/col';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
 import useSetState from '../unrelated/hooks/useSetState';
+import { isEqualWith } from '../unrelated/utils';
 import Dialog from '../Dialog';
 import { AnyObjectType, SubmitApiType } from '../unrelated/typings';
 import './index.less';
@@ -45,6 +47,8 @@ export interface LayoutFormPropTypes {
   onConfirm?: (data: AnyObjectType) => void;
   /** 表单数据 */
   formList: FormListType[];
+  /** 表单每行显示的数量 */
+  colGirdConfig?: ColProps;
   /** 支持antd Form组件官方传参所有类型 */
   formConfig?: FormProps;
 }
@@ -53,7 +57,7 @@ export interface LayoutFormPropTypes {
 export interface LayoutFormModalCallType {
   setFormLoading: (data: boolean) => void;
   setFormSaveLoading: (data: boolean) => void;
-  setFormFields: (fields: FieldData[]) => void;
+  setFormFields: FormInstance['setFields'];
   getFormValues: (data: string[]) => AnyObjectType | undefined;
   setFormValues: (values: AnyObjectType) => void;
   getFormSubmitValues: () => Promise<AnyObjectType | undefined>;
@@ -209,17 +213,17 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
     // 设置一组字段状态
     setFormFields: (fields) => {
       if (formRef.current) {
-        formRef.current.formSetFields(fields);
+        formRef.current.setFormFields(fields);
       }
     },
     // 读取表单值
     getFormValues: (data) => {
-      return formRef.current?.formGetValues(data);
+      return formRef.current?.getFormValues(data);
     },
     // 设置表单值
     setFormValues: (data) => {
       if (formRef.current) {
-        formRef.current.formSetValues(data);
+        formRef.current.setFormValues(data);
       }
     },
     // 获取表单提交的值
@@ -253,7 +257,7 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
               ...props.formConfig,
             }}
             rowGridConfig={{ gutter: [20, 0] }}
-            colGirdConfig={{ span: 12 }}
+            colGirdConfig={props.colGirdConfig || { span: 12 }}
             list={props.formList}
           />
           {props.children && props.children}
@@ -279,4 +283,4 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
   );
 };
 
-export default forwardRef(LayoutFormModal);
+export default React.memo(forwardRef(LayoutFormModal), isEqualWith);

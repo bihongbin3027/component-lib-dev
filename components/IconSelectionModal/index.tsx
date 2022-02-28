@@ -1,6 +1,7 @@
 import React from 'react';
-import { Row, Col, Button, Space, message } from 'antd';
+import { Row, Col, Button, Space } from 'antd';
 import useSetState from '../unrelated/hooks/useSetState';
+import { isEqualWith } from '../unrelated/utils';
 import Dialog from '../Dialog';
 import './index.less';
 
@@ -220,4 +221,4 @@ const IconSelectionModal = (props: Props) => {
   );
 };
 
-export default IconSelectionModal;
+export default React.memo(IconSelectionModal, isEqualWith);

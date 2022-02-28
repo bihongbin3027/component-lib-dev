@@ -1,3 +1,5 @@
+import 'antd/dist/antd.less';
+
 // -- APPEND ITEMS HERE --
 export { default as Affix } from './Affix';
 export { default as Dialog } from './Dialog';

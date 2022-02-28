@@ -31,7 +31,7 @@ const reset = () => {
 
 const manualSet = () => {
   if (formRef.current) {
-    formRef.current.formSetValues({
+    formRef.current.setFormValues({
       a: '这是手动设置的值!',
     });
   }
@@ -57,7 +57,7 @@ const manualSet = () => {
     list={[
       {
         componentName: 'Input',
-        name: 'sortSeq',
+        name: 'a',
         label: '输入框',
         placeholder: '请输入内容',
         rules: [{ required: true, message: '请输入内容' }], // 表单验证
@@ -90,9 +90,11 @@ const manualSet = () => {
         placeholder: '请选择',
         remoteConfig: {
           remoteApi: (val) => {
-            console.log('下拉框（远程搜索）触发ajax请求', val);
             return new Promise((resolve, reject) => {
-              resolve(selectData);
+              console.log('下拉框（远程搜索）触发ajax请求', val);
+              setTimeout(() => {
+                resolve(selectData);
+              }, 30);
             });
           },
         },

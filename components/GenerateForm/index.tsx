@@ -9,6 +9,7 @@ import React, {
 import {
   Row,
   Col,
+  Empty,
   message,
   Form,
   Input,
@@ -21,27 +22,40 @@ import {
   Checkbox,
   TreeSelect,
   Rate,
+  RadioChangeEvent,
 } from 'antd';
 import moment from 'moment';
 import _ from 'lodash';
 import { RowProps } from 'antd/es/row';
 import { ColProps } from 'antd/es/col';
 import { FormProps, Rule, FormItemProps } from 'antd/es/form';
-import { RateProps } from 'antd/lib/rate';
-import { TreeSelectProps } from 'antd/lib/tree-select';
-import { SelectProps } from 'antd/lib/select';
+import { InputProps } from 'antd/es/input';
+import { RateProps } from 'antd/es/rate';
+import { TreeSelectProps } from 'antd/es/tree-select';
+import { SelectProps } from 'antd/es/select';
+import { CheckboxValueType } from 'antd/es/checkbox/Group';
 import { DataNode, DefaultValueType } from 'rc-tree-select/es/interface';
-import { CascaderOption } from 'rc-cascader/es/Cascader';
-import { FieldData } from 'rc-field-form/es/interface';
+import { FormInstance } from 'rc-field-form/es/interface';
 import { DatePickerProps, RangePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
+import { isEqualWith } from '../unrelated/utils';
 import useSetState from '../unrelated/hooks/useSetState';
 import ConfigProvider from '../unrelated/ConfigProvider';
 import { AnyObjectType, SelectType } from '../unrelated/typings';
 import './index.less';
 
+export interface DefaultOptionType {
+  value?: string | number;
+  label?: React.ReactNode;
+  disabled?: boolean;
+  isLeaf?: boolean;
+  loading?: boolean;
+  children?: Array<DefaultOptionType>;
+  [key: string]: any;
+}
+
 type remoteValueType = string | undefined;
-type remotePromiseType = (value: remoteValueType) => Promise<SelectType[]>;
+type remotePromiseType = (value: remoteValueType, other?: any) => Promise<SelectType[]>;
 
 interface UnionType {
   componentName: 'Input' | 'Select' | 'DatePicker' | 'RemoteSearch';
@@ -83,8 +97,10 @@ export type FormListType = {
   maxLength?: number; // 可输入长度
   valuePropName?: string; // 子节点的值的属性，如 Switch 的是 'checked'
   inputConfig?: {
-    prefix?: string | React.ReactNode; // 带有前缀图标的 input
-    suffix?: string | React.ReactNode; // 带有后缀图标的 input
+    prefix?: React.ReactNode; // 带有前缀图标的 input
+    suffix?: React.ReactNode; // 带有后缀图标的 input
+    addonAfter?: React.ReactNode; // 带标签的 input，设置后置标签
+    addonBefore?: React.ReactNode; // 带标签的 input，设置前置标签
     // 对应Input组件的输入类型
     inputMode?:
       | 'text'
@@ -105,6 +121,8 @@ export type FormListType = {
     divide?: string; // 分隔符
   };
   selectConfig?: SelectProps<string>;
+  selectIsHideAll?: boolean; // 下拉菜单是否显示“全部”选项 true-隐藏下拉菜单全部选项
+  selectData?: SelectType[]; // 下拉菜单数据
   remoteConfig?: {
     initLoad?: false; // 是否默认加载 false（不加载）
     remoteApi: remotePromiseType; // 远程搜索的api
@@ -114,8 +132,8 @@ export type FormListType = {
   };
   // 级联选择
   regionSelectionConfig?: {
-    loadData: CascaderOption[]; // 级联数据
-    selectLoad?: (parentId: string) => Promise<CascaderOption[]>;
+    loadData: DefaultOptionType[]; // 级联数据
+    selectLoad?: (parentId: string) => Promise<DefaultOptionType[]>;
   };
   // 评分
   rateConfig?: RateProps;
@@ -132,16 +150,28 @@ export type FormListType = {
   };
   rows?: number; // TextArea高度
   rules?: Rule[]; // 表单验证
-  selectIsHideAll?: boolean; // 下拉菜单是否显示“全部”选项 true-隐藏下拉菜单全部选项
-  selectData?: SelectType[]; // 下拉菜单数据
+  inputChange?: (e: React.ChangeEvent<HTMLInputElement>, other?: any) => void;
+  inputEnter?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  textAreaChange?: (e: React.ChangeEvent<HTMLTextAreaElement>, other?: any) => void;
+  autoCompleteChange?: (e: string, other?: any) => void;
+  selectChange?: (e: string, other?: any) => void;
+  multipleChange?: (e: string, other?: any) => void;
+  remoteSearchChange?: (e: string, other?: any) => void;
+  datePickerChange?: (e: moment.Moment, other?: any) => void;
+  rangePickerChange?: (e: [moment.Moment, moment.Moment], other?: any) => void;
+  switchChange?: (e: boolean, other?: any) => void;
+  radioChange?: (e: RadioChangeEvent, other?: any) => void;
+  checkboxChange?: (e: CheckboxValueType[], other?: any) => void;
+  cascaderChange?: (e: any, other?: any) => void;
+  rateChange?: (e: number, other?: any) => void;
   render?: () => React.ReactElement; // 动态渲染插入额外元素
 } & FormItemProps;
 
 // 导出该组件可调用的方法类型
 export interface FormCallType {
-  formGetValues: (data: string[]) => AnyObjectType;
-  formSetFields: (fields: FieldData[]) => void;
-  formSetValues: (values: AnyObjectType) => void;
+  getFormValues: (data: string[]) => AnyObjectType;
+  setFormFields: FormInstance['setFields'];
+  setFormValues: (values: AnyObjectType) => void;
   formSubmit: () => Promise<AnyObjectType>;
   formReset: (fields?: string[]) => void;
 }
@@ -198,7 +228,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
    * @Author bihongbin
    * @Date 2021-03-16 09:35:24
    */
-  let list = useMemo(() => [...props.list], [props.list]);
+  let list = useMemo(() => (props.list ? [...props.list] : []), [props.list]);
 
   /**
    * @Description 缓存生成的随机id
@@ -217,24 +247,38 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       const config = item.remoteConfig;
       let current = remoteRef.current[item.name];
       if (config && config.remoteApi) {
-        setState({
-          remoteFetching: true,
-        });
-        if (current === undefined) {
+        setState((prev) => {
+          prev.remoteFetching = true;
           remoteRef.current[item.name] = [];
-        }
-        config.remoteApi(value).then((res) => {
-          setState({
-            remoteFetching: false,
-          });
-          if (item.name) {
+          prev.remoteData[item.name] = [];
+          return prev;
+        });
+        config
+          .remoteApi(value)
+          .then((res) => {
+            const deb = () => {
+              if (current === undefined) {
+                remoteRef.current[item.name] = [];
+              }
+              if (item.name) {
+                setState((prev) => {
+                  prev.remoteFetching = false;
+                  remoteRef.current[item.name] = res;
+                  prev.remoteData[item.name] = res;
+                  return prev;
+                });
+              }
+            };
+            setTimeout(deb, 100);
+          })
+          .catch(() => {
             setState((prev) => {
-              remoteRef.current[item.name] = res;
-              prev.remoteData[item.name] = res;
+              prev.remoteFetching = false;
+              remoteRef.current[item.name] = [];
+              prev.remoteData[item.name] = [];
               return prev;
             });
-          }
-        });
+          });
       }
     },
     [setState],
@@ -288,11 +332,11 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
    */
   const regionLoadData = async (
     item: FormListType,
-    selectedOptions: CascaderOption[] | undefined,
+    selectedOptions: DefaultOptionType[] | undefined,
   ) => {
     if (selectedOptions) {
       const targetOption = selectedOptions[selectedOptions.length - 1];
-      let result: CascaderOption[] = [];
+      let result: DefaultOptionType[] = [];
       if (item.regionSelectionConfig?.selectLoad) {
         targetOption.loading = true;
         result = await item.regionSelectionConfig?.selectLoad(targetOption.id);
@@ -325,11 +369,15 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       return (
         <Input
           disabled={item.disabled}
-          type={item.inputConfig?.inputMode ? item.inputConfig?.inputMode : 'text'}
+          type={item.inputConfig?.inputMode || 'text'}
           maxLength={item.maxLength}
-          prefix={item.inputConfig?.prefix ? item.inputConfig?.prefix : null}
-          suffix={item.inputConfig?.suffix ? item.inputConfig?.suffix : null}
-          placeholder={item.placeholder}
+          prefix={item.inputConfig?.prefix}
+          suffix={item.inputConfig?.suffix}
+          addonAfter={item.inputConfig?.addonAfter}
+          addonBefore={item.inputConfig?.addonBefore}
+          placeholder={item.placeholder || `请输入${item.label}`}
+          onChange={item.inputChange}
+          onPressEnter={item.inputEnter}
         />
       );
     };
@@ -341,7 +389,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           maxLength={item.maxLength}
           disabled={item.disabled}
           type="text"
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请输入${item.label}`}
+          onChange={item.inputChange}
+          onPressEnter={item.inputEnter}
         />
       );
     };
@@ -352,7 +402,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           rows={item.rows}
           disabled={item.disabled}
           maxLength={item.maxLength}
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请输入${item.label}`}
+          onChange={item.textAreaChange}
         />
       );
     };
@@ -363,12 +414,12 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           allowClear
           showSearch
           disabled={item.disabled}
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请选择${item.label}`}
           optionFilterProp="children"
-          maxLength={item.maxLength}
           filterOption={(input, option) =>
             option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
           }
+          onChange={item.autoCompleteChange}
           {...item.selectConfig}
         >
           {item.selectData
@@ -386,8 +437,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       return (
         <Select
           disabled={item.disabled}
-          maxLength={item.maxLength}
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请选择${item.label}`}
+          onChange={item.selectChange}
           {...item.selectConfig}
         >
           {item.selectData
@@ -406,10 +457,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         <Select
           mode="multiple"
           allowClear
-          maxLength={item.maxLength}
           disabled={item.disabled}
-          placeholder={item.placeholder}
-          maxTagCount="responsive"
+          placeholder={item.placeholder || `请选择${item.label}`}
+          onChange={item.multipleChange}
           {...item.selectConfig}
         >
           {item.selectData
@@ -432,10 +482,18 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         <Select
           mode={isMode || undefined}
           disabled={item.disabled}
-          placeholder={item.placeholder}
-          notFoundContent={state.remoteFetching ? <Spin size="small" /> : null}
+          placeholder={item.placeholder || `请选择${item.label}`}
+          notFoundContent={
+            state.remoteFetching ? (
+              <Spin size="small" />
+            ) : (
+              <Empty
+                style={{ marginTop: 8, marginBottom: 8 }}
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )
+          }
           filterOption={false}
-          maxLength={item.maxLength}
           allowClear={allowClear === false ? false : true}
           showSearch={showSearch === false ? false : true}
           // 当获取焦点查询全部
@@ -444,6 +502,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
             showSearch === false ? undefined : (value) => fetchRemote(value, item),
             300,
           )}
+          onChange={item.remoteSearchChange}
           {...item.selectConfig}
         >
           {item.name && state.remoteData[item.name]
@@ -461,7 +520,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       return (
         <DatePicker
           disabled={item.disabled}
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请选择${item.label}`}
+          onChange={item.datePickerChange}
           {...item.datePickerConfig}
         />
       );
@@ -472,6 +532,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         <RangePicker
           disabled={item.disabled}
           placeholder={item.rangePickerPlaceholder}
+          onChange={item.rangePickerChange}
           {...item.rangePickerConfig}
         />
       );
@@ -484,13 +545,14 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           checkedChildren="ON"
           unCheckedChildren="OFF"
           disabled={item.disabled}
+          onChange={item.switchChange}
         />
       );
     };
     // Radio
     const radioRender = (item: FormListType) => {
       return (
-        <Radio.Group>
+        <Radio.Group onChange={item.radioChange}>
           {item.selectData
             ? item.selectData.map((s: SelectType, k) => (
                 <Radio disabled={item.disabled} value={s.value} key={k}>
@@ -504,7 +566,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
     // Checkbox
     const checkboxRender = (item: FormListType) => {
       return (
-        <Checkbox.Group>
+        <Checkbox.Group onChange={item.checkboxChange}>
           {item.selectData
             ? item.selectData.map((s: SelectType, k) => (
                 <Checkbox disabled={item.disabled} value={s.value} key={k}>
@@ -523,8 +585,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           style={{ width: '100%' }}
           dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
           treeData={state.treeSelectData[item.name]}
-          placeholder={item.placeholder}
-          maxLength={item.maxLength}
+          placeholder={item.placeholder || `请选择${item.label}`}
           onChange={(value) => {
             const treeSelectConfig = item.treeSelectConfig;
             if (treeSelectConfig && treeSelectConfig.data) {
@@ -532,6 +593,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
               const flatten = state.treeSelectFlattenData[item.name];
               const type = Object.prototype.toString.call(value);
               let changeChild = [];
+              let newItem = { ...item };
               if (type === '[object String]') {
                 changeChild = flatten.filter((t) => t[item.treeSelectConfig.data.value] === value);
               }
@@ -542,16 +604,22 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
                   }
                 }
               }
-              let newItem = onChange(changeChild, { ...item });
-              if (newItem) {
-                list[index] = newItem;
-                form.setFieldsValue({
-                  [newItem.name]: value, // 设置对应字段值
-                });
-                fetchTreeSelect(newItem); // 查询树选择数据
+              if (onChange) {
+                const changeVal = onChange(changeChild, { ...item }) as FormListType;
+                if (changeVal) {
+                  newItem = changeVal;
+                }
+                if (newItem) {
+                  list[index] = newItem;
+                }
               }
+              form.setFieldsValue({
+                [newItem.name]: value, // 设置对应字段值
+              });
+              fetchTreeSelect(newItem); // 查询树选择数据
             }
           }}
+          allowClear
           treeDefaultExpandAll
           {...item.treeSelectConfig.extra}
         />
@@ -563,16 +631,17 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       return (
         <Cascader
           disabled={item.disabled}
-          placeholder={item.placeholder}
+          placeholder={item.placeholder || `请选择${item.label}`}
           options={(propsRegionConfig && propsRegionConfig.loadData) || []}
           loadData={(selectedOptions) => regionLoadData(item, selectedOptions)}
           changeOnSelect
+          onChange={item.cascaderChange}
         />
       );
     };
     // Rate
     const rateRender = (item: FormListType) => {
-      return <Rate disabled={item.disabled} {...item.rateConfig} />;
+      return <Rate disabled={item.disabled} onChange={item.rateChange} {...item.rateConfig} />;
     };
     // 渲染Union类型表单
     const unionRender = (m: UnionType) => {
@@ -717,6 +786,20 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'visible',
         'selectIsHideAll',
         'rateConfig',
+        'inputChange',
+        'inputEnter',
+        'textAreaChange',
+        'autoCompleteChange',
+        'selectChange',
+        'multipleChange',
+        'remoteSearchChange',
+        'datePickerChange',
+        'rangePickerChange',
+        'switchChange',
+        'radioChange',
+        'checkboxChange',
+        'cascaderChange',
+        'rateChange',
       ]);
       // Form.Item内有多个表单（Union类型），如果有设置name移除name
       if (item.componentName === 'Union') {
@@ -780,15 +863,15 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   // 暴漏给父组件调用
   useImperativeHandle<any, FormCallType>(ref, () => ({
     // 获取对应的字段值
-    formGetValues: (data) => {
+    getFormValues: (data) => {
       return form.getFieldsValue(data);
     },
     // 设置一组字段状态
-    formSetFields: (fields) => {
+    setFormFields: (fields) => {
       form.setFields(fields);
     },
     // 设置表单值
-    formSetValues: (values) => {
+    setFormValues: (values) => {
       form.setFieldsValue(values);
     },
     // 提交表单
@@ -800,7 +883,10 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
             resolve(values);
           })
           .catch((err) => {
-            message.warn('请输入或选择表单必填项', 1.5);
+            if (err.errorFields && err.errorFields.length) {
+              console.warn('请输入或选择表单必填项：', err);
+              message.warn('请输入或选择表单必填项', 1.5);
+            }
             reject(false);
           });
       });
@@ -821,7 +907,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         {...formConfig}
         initialValues={{
           sortSeq: 10,
-          startTime: moment(),
+          startTime: moment(`${new Date().getFullYear()}-01-01`),
           endTime: moment('20991231'),
           ...(formConfig ? formConfig.initialValues : undefined),
         }}
@@ -839,4 +925,4 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   );
 }
 
-export default forwardRef(GenerateForm);
+export default React.memo(forwardRef(GenerateForm), isEqualWith);

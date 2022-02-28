@@ -1,4 +1,11 @@
-import React, { useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
+import React, {
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+} from 'react';
 import moment from 'moment';
 import _ from 'lodash';
 import { Row, Col, Space, Button, message } from 'antd';
@@ -8,7 +15,7 @@ import GenerateForm, { FormListType, FormCallType } from '../GenerateForm';
 import GenerateTable, { TableCallType } from '../GenerateTable';
 import useSetState from '../unrelated/hooks/useSetState';
 import Dialog from '../Dialog';
-import { dropDownMenuPushAll } from '../unrelated/utils';
+import { dropDownMenuPushAll, isEqualWith } from '../unrelated/utils';
 import { AnyObjectType, PromiseAxiosResultType } from '../unrelated/typings';
 import './index.less';
 
@@ -33,7 +40,7 @@ export interface LayoutTableModalPropType {
   title: React.ReactNode;
   /** 弹窗宽度 */
   width?: number;
-  /* 头部渲染额外元素 */
+  /** 头部渲染额外元素 */
   topExtra?: React.ReactNode;
   /** 搜索表单数据 */
   searchFormList?: FormListType[];
@@ -50,20 +57,25 @@ export interface LayoutTableModalPropType {
   };
   /** 是否开启默认查询功能 */
   autoGetList?: boolean;
+  /** 查询回调 */
+  searchCallback?: (data: any) => Promise<Boolean>;
+  /** 不需要重置的表单字段 */
+  searchNoResetFiled?: string[];
   /** 列表请求函数 */
   apiMethod?: (data: any) => PromiseAxiosResultType;
   /** 查询表单手动参数转换 */
   manualParameterChange?: (params: AnyObjectType) => AnyObjectType;
   /** 静态表格数据 */
   data?: AnyObjectType[];
+  /** 数据调用成功回调 */
+  getTableSuccessData?: (data: AnyObjectType) => void;
   /** 关闭弹窗回调 */
   onCancel?: () => void;
   /** 确定弹窗回调 */
-  onConfirm?: (data: AnyObjectType[]) => Promise<boolean>;
+  onConfirm?: (rows: AnyObjectType[], ids: string[]) => Promise<boolean>;
 }
 
 interface StateType {
-  autoGetList: boolean;
   saveLoading: boolean;
 }
 
@@ -72,16 +84,46 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
   const searchFormRef = useRef<FormCallType>(null);
   const tableRef = useRef<TableCallType>();
   const [state, setState] = useSetState<StateType>({
-    autoGetList: false, // 是否开启默认查询功能(true是 false否)
     saveLoading: false, // 保存按钮loading
   });
+
+  /**
+   * @Description 搜索表单宽度
+   * @Author bihongbin
+   * @Date 2021-09-17 17:50:34
+   * @param {*} useMemo
+   */
+  const colGirdWidth = useMemo(() => {
+    if (props.width >= 500 && props.width <= 800) {
+      return {
+        span: 7,
+      };
+    }
+    if (props.width > 800 && props.width <= 1000) {
+      return {
+        span: 6,
+      };
+    } else if (props.width > 1000 && props.width <= 1200) {
+      return {
+        span: 5,
+      };
+    } else if (props.width > 1200) {
+      return {
+        span: 4,
+      };
+    } else {
+      return {
+        span: 8,
+      };
+    }
+  }, [props.width]);
 
   /**
    * @Description 查询
    * @Author bihongbin
    * @Date 2021-03-05 09:52:56
    */
-  const formSubmit = async () => {
+  const formSubmit = useCallback(async () => {
     if (searchFormRef.current && tableRef.current) {
       let result = await searchFormRef.current.formSubmit();
       if (result) {
@@ -92,14 +134,27 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
             result[o] = moment(result[o]).format(formatStr);
           }
         }
+        result = {
+          updateSelected: false,
+          ...result,
+        };
         // 从父级手动转换参数
         if (props.manualParameterChange) {
           result = props.manualParameterChange(result);
         }
-        tableRef.current?.getTableList(result);
+        if (props.searchCallback) {
+          // 查询回调
+          props.searchCallback(result).then((res) => {
+            if (res) {
+              tableRef.current?.getTableList(result);
+            }
+          });
+        } else {
+          tableRef.current?.getTableList(result);
+        }
       }
     }
-  };
+  }, [props]);
 
   /**
    *
@@ -109,7 +164,28 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
    */
   const formReset = () => {
     if (searchFormRef.current) {
-      searchFormRef.current.formReset();
+      let fileName: string[] = [];
+      const searchNoResetFiled = props.searchNoResetFiled || [];
+
+      if (props.searchFormList) {
+        for (let n of props.searchFormList) {
+          // 处理表单嵌套的情况
+          if (n.unionConfig) {
+            for (let k of n.unionConfig.unionItems) {
+              // 找出禁止重置的字段
+              if (k.name && !searchNoResetFiled.includes(k.name)) {
+                fileName.push(k.name);
+              }
+            }
+          }
+          // 找出禁止重置的字段
+          if (n.name && !searchNoResetFiled.includes(n.name)) {
+            fileName.push(n.name);
+          }
+        }
+      }
+
+      searchFormRef.current.formReset(fileName);
     }
     formSubmit();
   };
@@ -120,16 +196,18 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
    * @Date 2020-08-07 13:48:41
    */
   const handleConfirm = () => {
-    let data: AnyObjectType[] = [];
+    let rows: AnyObjectType[] = [];
+    let ids: string[] = [];
     if (props.onConfirm) {
       if (tableRef.current) {
-        data = tableRef.current.getSelectRowsArray();
+        ids = tableRef.current.getSelectIds();
+        rows = tableRef.current.getSelectRowsArray();
       }
       setState({
         saveLoading: true,
       });
       props
-        .onConfirm(data)
+        .onConfirm(rows, ids)
         .then((res) => {
           setState({
             saveLoading: false,
@@ -153,25 +231,10 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
    * @Date 2020-08-05 14:09:53
    */
   useEffect(() => {
-    if (props.autoGetList) {
-      setState({
-        autoGetList: props.autoGetList,
-      });
+    if (props.autoGetList && props.visible) {
+      formSubmit();
     }
-  }, [props.autoGetList, setState]);
-
-  /**
-   * @Description 初始查询
-   * @Author bihongbin
-   * @Date 2020-10-29 17:17:51
-   */
-  useEffect(() => {
-    if (props.visible && tableRef.current && state.autoGetList) {
-      tableRef.current.getTableList({
-        updateSelected: false,
-      });
-    }
-  }, [props.visible, state.autoGetList]);
+  }, [formSubmit, props.autoGetList, props.visible]);
 
   // 暴漏给父组件调用
   useImperativeHandle<any, LayoutTableModalCallType>(ref, () => ({
@@ -179,7 +242,7 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
     ...searchFormRef.current,
     // 表格实例对象方法
     ...tableRef.current,
-    // 设置保存loading
+    /** 设置保存loading */
     setSavaLoading: (data) => {
       setState({
         saveLoading: data,
@@ -203,6 +266,7 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
         <GenerateForm
           ref={searchFormRef}
           rowGridConfig={{ gutter: 10 }}
+          colGirdConfig={colGirdWidth}
           list={dropDownMenuPushAll(props.searchFormList)}
           formConfig={props.formConfig}
           render={() => {
@@ -224,22 +288,27 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
       ) : null}
       <GenerateTable
         ref={tableRef}
-        rowType={props.tableColumnsList.rowType}
-        apiMethod={props.apiMethod}
-        columns={props.tableColumnsList.list}
-        data={props.data}
-        scroll={{
-          x: 'max-content',
+        extra={{
+          rowType: props.tableColumnsList.rowType,
+          apiMethod: props.apiMethod,
+          columns: props.tableColumnsList.list,
+          data: props.data,
+          getTableSuccessData: props.getTableSuccessData,
+          scroll: {
+            x: 'max-content',
+          },
+          tableConfig: props.tableColumnsList.tableConfig,
         }}
-        tableConfig={props.tableColumnsList.tableConfig}
       />
       <Row className="from-table-modal-foot" justify="center">
         <Col>
           <Space size={20}>
-            <Button onClick={() => props.onCancel && props.onCancel()}>关闭</Button>
-            <Button type="primary" loading={state.saveLoading} onClick={handleConfirm}>
-              确定
-            </Button>
+            {props.onCancel ? <Button onClick={() => props.onCancel()}>关闭</Button> : null}
+            {props.onConfirm ? (
+              <Button type="primary" loading={state.saveLoading} onClick={handleConfirm}>
+                确定
+              </Button>
+            ) : null}
           </Space>
         </Col>
       </Row>
@@ -247,4 +316,4 @@ function LayoutTableModal(props: LayoutTableModalPropType, ref: any) {
   );
 }
 
-export default forwardRef(LayoutTableModal);
+export default React.memo(forwardRef(LayoutTableModal), isEqualWith);

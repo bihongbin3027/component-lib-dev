@@ -3,14 +3,14 @@ import { Button, Row, Col } from 'antd';
 
 <Row gutter={10}>
   <Col>
-    <Affix offsetTop={0}>
+    <AffixBox offsetTop={0}>
       <Button>固定到顶部</Button>
-    </Affix>
+    </AffixBox>
   </Col>
   <Col>
-    <Affix offsetBottom={0}>
+    <AffixBox offsetBottom={0}>
       <Button>固定到底部</Button>
-    </Affix>
+    </AffixBox>
   </Col>
 </Row>;
 ```
