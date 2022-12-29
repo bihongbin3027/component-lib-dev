@@ -373,18 +373,20 @@ const GenerateTable = (props: GenerateTableProp, ref: any) => {
    * @Author bihongbin
    * @Date 2020-07-21 10:36:35
    */
-  const handleResize = (index: number) => (e: any, { size }: any) => {
-    setFormatColumns((prev) => {
-      const nextColumns = [...prev];
-      nextColumns[index] = {
-        ...nextColumns[index],
-        width: size.width,
-      };
-      // 缓存表格头拖拽以后的数据
-      columnsCacheRef.current = nextColumns;
-      return nextColumns;
-    });
-  };
+  const handleResize =
+    (index: number) =>
+    (e: any, { size }: any) => {
+      setFormatColumns((prev) => {
+        const nextColumns = [...prev];
+        nextColumns[index] = {
+          ...nextColumns[index],
+          width: size.width,
+        };
+        // 缓存表格头拖拽以后的数据
+        columnsCacheRef.current = nextColumns;
+        return nextColumns;
+      });
+    };
 
   /**
    * @Description 保存input数据
