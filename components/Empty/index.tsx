@@ -1,15 +1,23 @@
+/*
+ * @Description 空组件
+ * @Author bihongbin
+ * @Date 2021-09-03 10:02:49
+ * @LastEditors bihongbin
+ * @LastEditTime 2022-08-19 12:00:54
+ */
 import React from 'react';
-import { Empty, Row } from 'antd';
+import { Empty as Em, Row } from 'antd';
 import { EmptyProps } from 'antd/lib/empty';
 import './index.less';
 
+/** 456789 */
 type Props = EmptyProps & {
   /** 区域高度 */
   outerHeight?: number;
 };
 
-/** 空状态，展示占位图 */
-function Abc(props?: Props) {
+/** 控组件 */
+function Empty(props?: Props) {
   const params: Props = { ...props };
   delete params.outerHeight;
 
@@ -22,9 +30,10 @@ function Abc(props?: Props) {
       align="middle"
       justify="center"
     >
-      <Empty description="暂无数据" {...params} />
+      <Em description="暂无数据" {...params} />
     </Row>
   );
 }
 
-export default React.memo(Abc);
+/** 控组件 */
+export default React.memo(Empty);

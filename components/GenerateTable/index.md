@@ -6,7 +6,6 @@ import { FormOutlined } from '@ant-design/icons';
 
 const oneTableRef = useRef(null);
 const twoTableRef = useRef(null);
-const [count, setCount] = useState(0);
 const [data, setData] = useState([]);
 
 // 规格项价格表格头一键设置值
@@ -65,6 +64,8 @@ useEffect(() => {
       f: '0',
       g: '2021-06-10',
       h: '1',
+      i: '25',
+      j: '1',
       ss: [
         { label: '小花', value: '1' },
         { label: '小海', value: '2' },
@@ -76,11 +77,11 @@ useEffect(() => {
 
 <>
   <h3>静态表格</h3>
-  <div onClick={() => setCount(count + 1)}>计数器：{count}</div>
   <GenerateTable
     ref={oneTableRef}
     extra={useMemo(
       () => ({
+        controlled: false, // 非受控组件
         columns: [
           {
             width: 85,
@@ -155,6 +156,40 @@ useEffect(() => {
             recordSelectField: 'ss',
           },
           {
+            title: '朋友',
+            dataIndex: 'i',
+            editable: true,
+            valueType: 'RemoteSearch',
+            remoteConfig: {
+              remoteApi: (val) => {
+                return new Promise((resolve) => {
+                  resolve([
+                    { label: '张三', value: '25' },
+                    { label: '李四', value: '26' },
+                  ]);
+                });
+              },
+            },
+          },
+          {
+            title: '家人',
+            dataIndex: 'j',
+            editable: true,
+            valueType: 'RemoteSearch',
+            remoteConfig: {
+              remoteApi: (val) => {
+                return new Promise((resolve) => {
+                  setTimeout(() => {
+                    resolve([
+                      { label: '牛大', value: '1' },
+                      { label: '牛儿', value: '2' },
+                    ]);
+                  }, 200);
+                });
+              },
+            },
+          },
+          {
             width: 100,
             title: '操作',
             fixed: 'right',
@@ -169,6 +204,7 @@ useEffect(() => {
         ],
         data: data,
         scroll: {
+          x: 1000,
           y: 500,
         },
       }),
@@ -186,29 +222,53 @@ useEffect(() => {
   <pre />
   <pre />
   <h3>带api请求表格</h3>
-  <Button type="primary" onClick={loadList}>
-    加载数据
-  </Button>
+  <Space>
+    <Button type="primary" onClick={loadList}>
+      加载数据
+    </Button>
+    <Button
+      type="primary"
+      onClick={() => {
+        twoTableRef.current.clearSelectIds();
+      }}
+    >
+      清空选中
+    </Button>
+    <Button
+      type="primary"
+      onClick={() => {
+        twoTableRef.current.setRowSelected([2, 3], true);
+      }}
+    >
+      手动选中
+    </Button>
+  </Space>
   <pre />
   <GenerateTable
     ref={twoTableRef}
     extra={useMemo(
       () => ({
         rowType: 'checkbox',
+        drag: {
+          open: true,
+          moveRow: (dragIndex, hoverIndex, data, range) => {
+            console.log('data', data);
+            return false;
+          },
+        },
         columns: [
           {
             width: 100,
             title: 'Name',
             dataIndex: 'name',
             ellipsis: true,
+            sorter: true,
           },
           {
             width: 100,
             title: '年龄',
             dataIndex: 'age',
-            sorter: (prev, next) => {
-              return prev.age - next.age;
-            },
+            sorter: true,
           },
           {
             width: 200,
@@ -225,7 +285,6 @@ useEffect(() => {
           },
         ],
         apiMethod: (params) => {
-          console.log(123);
           return new Promise((resolve) => {
             axios
               .get('https://randomuser.me/api', {

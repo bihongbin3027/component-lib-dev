@@ -72,7 +72,6 @@ interface StateType {
   checkedCurrent: TreeType[];
 }
 
-/** 树组件 */
 const TreeNode = (props: PropTypes, ref: any) => {
   const [state, setState] = useSetState<StateType>({
     loading: false, // 加载loading
@@ -512,4 +511,5 @@ const TreeNode = (props: PropTypes, ref: any) => {
   );
 };
 
+/** 树组件 */
 export default React.memo(forwardRef(TreeNode), isEqualWith);

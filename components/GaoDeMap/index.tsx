@@ -3,7 +3,7 @@
  * @Author bihongbin
  * @Date 2020-12-03 16:34:09
  * @LastEditors bihongbin
- * @LastEditTime 2021-09-14 17:18:25
+ * @LastEditTime 2022-08-19 14:00:51
  */
 
 import React, {
@@ -45,10 +45,10 @@ export interface MapType {
   };
 }
 
-/** 高德地图组件 */
 const GaoDeMap = (props: PropType, ref: any) => {
   const mapRef = useRef<any>(null);
   const mapCenterLocRef = useRef<any>(null);
+  const storageConversion = useRef<any>(null);
 
   /**
    * @Description 缓存生成的随机容器id
@@ -214,13 +214,13 @@ const GaoDeMap = (props: PropType, ref: any) => {
       });
 
       // 关键字查询结果下拉列表点击事件
-      ac.addEventListener('onconfirm', (e) => {
+      ac.addEventListener('onconfirm', (e: any) => {
         const { province, city, district, street, business } = e.item.value;
         setPlace(province + city + district + street + business);
       });
 
       // 地图点击事件
-      mapRef.current.addEventListener('click', (e) => {
+      mapRef.current.addEventListener('click', (e: any) => {
         // 清除地图覆盖物
         mapRef.current.clearOverlays();
         // 添加覆盖物
@@ -232,6 +232,10 @@ const GaoDeMap = (props: PropType, ref: any) => {
           },
         });
       });
+
+      if (storageConversion.current) {
+        storageConversion.current();
+      }
 
       if (mapCenterLocRef.current) {
         // 使用记忆的中心点和坐标
@@ -269,19 +273,27 @@ const GaoDeMap = (props: PropType, ref: any) => {
         lng: data[0],
         lat: data[1],
       });
-      const point = new BMap.Point(data[0], data[1]);
-      // 转换为百度坐标
-      coordinateConversion({
-        target: 'baidu',
-        point,
-        callback: (d) => {
-          console.log('转换为百度坐标后：', {
-            lng: d.lng,
-            lat: d.lat,
-          });
-          setMapCenterLocation([d.lng, d.lat], zoom);
-        },
-      });
+      const func = () => {
+        const point = new BMap.Point(data[0], data[1]);
+        // 转换为百度坐标
+        coordinateConversion({
+          target: 'baidu',
+          point,
+          callback: (d) => {
+            console.log('转换为百度坐标后：', {
+              lng: d.lng,
+              lat: d.lat,
+            });
+            setMapCenterLocation([d.lng, d.lat], zoom);
+          },
+        });
+      };
+      // 这里写try catch防止BMap没有初始完成，就访问了BMap报错问题，把操作放在loadMap里执行
+      try {
+        func();
+      } catch (error) {
+        storageConversion.current = func;
+      }
     },
   }));
 
@@ -302,4 +314,5 @@ const GaoDeMap = (props: PropType, ref: any) => {
   );
 };
 
+/** 地图组件 */
 export default React.memo(forwardRef(GaoDeMap), isEqualWith);

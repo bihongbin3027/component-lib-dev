@@ -7,7 +7,6 @@ import { FormProps } from 'antd/es/form';
 import { ColProps } from 'antd/es/col';
 import GenerateForm, { FormCallType, FormListType } from '../GenerateForm';
 import useSetState from '../unrelated/hooks/useSetState';
-import { isEqualWith } from '../unrelated/utils';
 import Dialog from '../Dialog';
 import { AnyObjectType, SubmitApiType } from '../unrelated/typings';
 import './index.less';
@@ -32,6 +31,8 @@ export interface LayoutFormPropTypes {
 
   /** 手动参数转换 */
   manualParameterChange?: (params: AnyObjectType) => AnyObjectType;
+  /** 手动验证表单 */
+  manualVerification?: (params: AnyObjectType) => boolean;
   /** 提交表单需要移除的参数 */
   submitRemoveField?: string[];
   /** 需要提交表单的额外参数 */
@@ -134,6 +135,16 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
         // 从父级手动转换参数
         if (props.manualParameterChange) {
           formParams = props.manualParameterChange(formParams);
+        }
+        // 手动验证表单
+        if (props.manualVerification) {
+          if (!props.manualVerification(formParams)) {
+            console.warn('手动验证表单不通过');
+            setState({
+              saveLoading: false,
+            });
+            return;
+          }
         }
         formParams = _.omitBy(formParams, _.isNil);
         if (props.submitApi && formParams) {
@@ -283,4 +294,4 @@ const LayoutFormModal = (props: LayoutFormPropTypes, ref: any) => {
   );
 };
 
-export default React.memo(forwardRef(LayoutFormModal), isEqualWith);
+export default forwardRef(LayoutFormModal);

@@ -1,6 +1,6 @@
 {
   "name": "hlyc-web-pack",
-  "version": "3.0.7",
+  "version": "3.5.61",
   "description": "华旅云创web端组件",
   "main": "lib/index.js",
   "module": "lib/index.js",
@@ -29,7 +29,11 @@
     "@rollup/plugin-commonjs": "^17.1.0",
     "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.2.0",
-    "@types/react": "^17.0.2",
+    "@types/lodash": "^4.14.181",
+    "@types/react": "^17.0.43",
+    "@types/react-dom": "^17.0.14",
+    "@types/react-resizable": "^1.7.4",
+    "@types/uuid": "^8.3.4",
     "@typescript-eslint/parser": "^4.15.2",
     "@umijs/fabric": "^2.7.0",
     "antd": "4.16.13",
@@ -53,12 +57,12 @@
     "plop": "^3.0.5",
     "postcss": "^8.3.6",
     "prettier": "^2.2.1",
-    "react": "^17.0.1",
+    "react": "17.0.2",
     "react-docgen-typescript": "^1.21.0",
-    "react-dom": "^17.0.1",
+    "react-dom": "17.0.2",
     "react-draggable": "^4.4.3",
     "react-resizable": "^3.0.4",
-    "react-styleguidist": "^11.1.5",
+    "react-styleguidist": "^12.0.0",
     "rollup": "^2.39.1",
     "rollup-plugin-filesize": "^9.1.1",
     "rollup-plugin-peer-deps-external": "^2.2.4",
@@ -74,9 +78,15 @@
   "peerDependencies": {
     "lodash": "^4.17.21",
     "moment": "^2.29.1",
-    "react": ">=16.9.0",
-    "react-dom": ">=16.9.0",
+    "react": "17.0.2",
+    "react-dom": "17.0.2",
     "react-draggable": "^4.4.3",
     "uuid": "^8.3.2"
+  },
+  "dependencies": {
+    "ahooks": "^3.7.2",
+    "immutability-helper": "^3.1.1",
+    "react-dnd": "14.0.5",
+    "react-dnd-html5-backend": "14.1.0"
   }
 }

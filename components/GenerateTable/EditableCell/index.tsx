@@ -1,10 +1,12 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef } from 'react';
 import _ from 'lodash';
 import moment from 'moment';
 import { Form, Input, Select, DatePicker, Spin } from 'antd';
 import { InternalFieldProps } from 'rc-field-form/lib/Field';
+import { useDrag, useDrop } from 'react-dnd';
 import { SelectType, AnyObjectType } from '../../unrelated/typings';
 import { typeofEqual, getSelectValue } from '../../unrelated/utils';
+import './index.less';
 
 const { Option } = Select;
 const EditableContext = React.createContext<any>(null);
@@ -45,13 +47,62 @@ type EditableCellProps = {
   handleSave: (record: AnyObjectType) => void;
 } & EditableColumnsType;
 
-export const EditableRow: React.FC = (props) => {
+interface DraggableBodyRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
+  open: boolean;
+  index: number;
+  moveRow: (dragIndex: number, hoverIndex: number) => void;
+}
+
+export const EditableRow = ({
+  open,
+  index,
+  moveRow,
+  className,
+  style,
+  ...restProps
+}: DraggableBodyRowProps) => {
   const [form] = Form.useForm();
+
+  // 列拖动功能
+  const ref = useRef<HTMLTableRowElement>(null);
+  const [{ isOver, dropClassName }, drop] = useDrop({
+    accept: 'DraggableBodyRow',
+    collect: (monitor) => {
+      const { index: dragIndex } = monitor.getItem() || ({} as any);
+
+      if (dragIndex === index) {
+        return {};
+      }
+
+      return {
+        isOver: monitor.isOver(),
+        dropClassName: dragIndex < index ? ' drop-over-downward' : ' drop-over-upward',
+      };
+    },
+    drop: (item: { index: number }) => {
+      moveRow(item.index, index);
+    },
+  });
+  const [, drag] = useDrag({
+    type: 'DraggableBodyRow',
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+  if (open) {
+    drop(drag(ref));
+  }
 
   return (
     <Form size="small" component={false} form={form}>
       <EditableContext.Provider value={form}>
-        <tr {...props} />
+        <tr
+          ref={ref}
+          className={`${className}${isOver ? dropClassName : ''}`}
+          style={{ cursor: open ? 'move' : 'auto', ...style }}
+          {...restProps}
+        />
       </EditableContext.Provider>
     </Form>
   );
@@ -158,9 +209,9 @@ const EditableCell: React.FC<EditableCellProps> = ({
       return str.toLowerCase().indexOf(input.toLowerCase()) >= 0;
     };
     // 渲染option
-    const optionNode = (data) => {
+    const optionNode = (data: SelectType[]) => {
       if (_.isArray(data)) {
-        return data.map((m: SelectType, i: number) => (
+        return data.map((m, i: number) => (
           <Option key={i} value={m.value}>
             {m.label}
           </Option>
@@ -209,6 +260,10 @@ const EditableCell: React.FC<EditableCellProps> = ({
         );
         break;
       case 'RemoteSearch':
+        let selectData = valueEnum;
+        if (remoteData[dataIndex]) {
+          selectData = remoteData[dataIndex];
+        }
         node = (
           <Select
             mode={remoteConfig.remoteMode}
@@ -223,7 +278,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
             onFocus={() => fetchRemote(undefined, dataIndex, record, remoteConfig.remoteApi)}
             onSearch={(value) => fetchRemote(value, dataIndex, record, remoteConfig.remoteApi)}
           >
-            {dataIndex && optionNode(remoteData[dataIndex])}
+            {dataIndex && optionNode(selectData)}
           </Select>
         );
         break;

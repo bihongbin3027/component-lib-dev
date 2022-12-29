@@ -1,14 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import Draggable, { DraggableEvent, DraggableData } from 'react-draggable';
-// import isEqual from 'fast-deep-equal/react';
 import { Modal } from 'antd';
 import { ModalProps } from 'antd/es/modal';
 import './index.less';
 
 let dialogIndex = 1;
 
-type PropType = ModalProps & {
+export type DialogPropType = ModalProps & {
   /** 内容区域高度 */
   height?: number;
   onOk?: (e?: React.MouseEvent<HTMLElement, MouseEvent>) => void;
@@ -26,7 +25,7 @@ interface StateType {
 }
 
 /** 弹窗组件 */
-class Dialog extends React.Component<PropType, StateType> {
+class Dialog extends React.Component<DialogPropType, StateType> {
   static show(props: any): Dialog {
     let body = document.body;
     let host = document.createElement('div');
@@ -68,7 +67,7 @@ class Dialog extends React.Component<PropType, StateType> {
 
   draggleRef: any;
 
-  constructor(props: PropType) {
+  constructor(props: DialogPropType) {
     super(props);
 
     this.state = {
@@ -90,11 +89,6 @@ class Dialog extends React.Component<PropType, StateType> {
       },
     });
   }
-
-  // shouldComponentUpdate(nextProps) {
-  //   console.log('nextProps', nextProps);
-  //   return !isEqual(this.props, nextProps);
-  // }
 
   render() {
     let props = this.props;

@@ -16,6 +16,7 @@ import {
   Select,
   Cascader,
   DatePicker,
+  TimePicker,
   Switch,
   Spin,
   Radio,
@@ -29,7 +30,9 @@ import _ from 'lodash';
 import { RowProps } from 'antd/es/row';
 import { ColProps } from 'antd/es/col';
 import { FormProps, Rule, FormItemProps } from 'antd/es/form';
-import { InputProps } from 'antd/es/input';
+import { RangePickerSharedProps } from 'rc-picker/lib/RangePicker';
+import { PickerSharedProps } from 'rc-picker/lib/Picker';
+import { TimePickerProps } from 'antd/es/time-picker';
 import { RateProps } from 'antd/es/rate';
 import { TreeSelectProps } from 'antd/es/tree-select';
 import { SelectProps } from 'antd/es/select';
@@ -38,7 +41,7 @@ import { DataNode, DefaultValueType } from 'rc-tree-select/es/interface';
 import { FormInstance } from 'rc-field-form/es/interface';
 import { DatePickerProps, RangePickerProps } from 'antd/es/date-picker';
 import { v4 as uuidV4 } from 'uuid';
-import { isEqualWith } from '../unrelated/utils';
+import { isEqualWith, typeofEqual } from '../unrelated/utils';
 import useSetState from '../unrelated/hooks/useSetState';
 import ConfigProvider from '../unrelated/ConfigProvider';
 import { AnyObjectType, SelectType } from '../unrelated/typings';
@@ -56,14 +59,35 @@ export interface DefaultOptionType {
 
 type remoteValueType = string | undefined;
 type remotePromiseType = (value: remoteValueType, other?: any) => Promise<SelectType[]>;
+type inputConfig = {
+  prefix?: React.ReactNode; // 带有前缀图标的 input
+  suffix?: React.ReactNode; // 带有后缀图标的 input
+  addonAfter?: React.ReactNode; // 带标签的 input，设置后置标签
+  addonBefore?: React.ReactNode; // 带标签的 input，设置前置标签
+  // 对应Input组件的输入类型
+  inputMode?:
+    | 'text'
+    | 'password'
+    | 'email'
+    | 'url'
+    | 'number'
+    | 'range'
+    | 'Date pickers'
+    | 'search'
+    | 'color';
+};
 
 interface UnionType {
-  componentName: 'Input' | 'Select' | 'DatePicker' | 'RemoteSearch';
-  name: string; // 字段名
-  placeholder?: string;
-  selectData?: SelectType[];
+  componentName: 'Input' | 'Select' | 'DatePicker' | 'TimePicker' | 'RemoteSearch';
+  name: FormListType['name']; // 字段名
+  placeholder?: FormListType['placeholder'];
+  selectData?: FormListType['selectData'];
+  inputConfig?: FormListType['inputConfig'];
   remoteConfig?: FormListType['remoteConfig'];
-  rules?: Rule[]; // 表单验证
+  datePickerConfig?: FormListType['datePickerConfig'];
+  rangePickerConfig?: FormListType['rangePickerConfig'];
+  timePickerConfig?: FormListType['timePickerConfig'];
+  rules?: FormListType['rules']; // 表单验证
 }
 
 // 表单参数配置
@@ -81,6 +105,7 @@ export type FormListType = {
     | 'RemoteSearch'
     | 'DatePicker'
     | 'RangePicker'
+    | 'TimePicker'
     | 'Switch'
     | 'Radio'
     | 'Checkbox'
@@ -96,25 +121,10 @@ export type FormListType = {
   disabled?: boolean; // 是否禁用
   maxLength?: number; // 可输入长度
   valuePropName?: string; // 子节点的值的属性，如 Switch 的是 'checked'
-  inputConfig?: {
-    prefix?: React.ReactNode; // 带有前缀图标的 input
-    suffix?: React.ReactNode; // 带有后缀图标的 input
-    addonAfter?: React.ReactNode; // 带标签的 input，设置后置标签
-    addonBefore?: React.ReactNode; // 带标签的 input，设置前置标签
-    // 对应Input组件的输入类型
-    inputMode?:
-      | 'text'
-      | 'password'
-      | 'email'
-      | 'url'
-      | 'number'
-      | 'range'
-      | 'Date pickers'
-      | 'search'
-      | 'color';
-  };
+  inputConfig?: inputConfig;
   datePickerConfig?: DatePickerProps; // datePicker 可选类型
   rangePickerConfig?: RangePickerProps; // RangePicker 可选类型
+  timePickerConfig?: TimePickerProps; // timePicker 可选类型
   unionConfig?: {
     // 要显示n个表单的类型
     unionItems: UnionType[];
@@ -157,8 +167,9 @@ export type FormListType = {
   selectChange?: (e: string, other?: any) => void;
   multipleChange?: (e: string, other?: any) => void;
   remoteSearchChange?: (e: string, other?: any) => void;
-  datePickerChange?: (e: moment.Moment, other?: any) => void;
-  rangePickerChange?: (e: [moment.Moment, moment.Moment], other?: any) => void;
+  datePickerChange?: PickerSharedProps<any>['onChange'];
+  rangePickerChange?: RangePickerSharedProps<any>['onChange'];
+  timePickerChange?: PickerSharedProps<any>['onChange'];
   switchChange?: (e: boolean, other?: any) => void;
   radioChange?: (e: RadioChangeEvent, other?: any) => void;
   checkboxChange?: (e: CheckboxValueType[], other?: any) => void;
@@ -177,7 +188,7 @@ export interface FormCallType {
 }
 
 // 组件传参配置props
-interface GenerateFormProp {
+export interface GenerateFormPropType {
   /** 组件类名 */
   className?: string;
   /** 渲染的表单元素 */
@@ -209,8 +220,7 @@ interface StateType {
   };
 }
 
-/** 动态表单组件 */
-function GenerateForm(props: GenerateFormProp, ref: any) {
+function GenerateForm(props: GenerateFormPropType, ref: any) {
   const [form] = Form.useForm();
   let { className, formConfig, rowGridConfig, colGirdConfig, render } = props;
   const remoteRef = useRef<StateType['remoteData']>({});
@@ -245,12 +255,13 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   const fetchRemote = useCallback(
     (value: remoteValueType, item: FormListType) => {
       const config = item.remoteConfig;
-      let current = remoteRef.current[item.name];
+      const names = item.name as string;
+      let current = remoteRef.current[names];
       if (config && config.remoteApi) {
         setState((prev) => {
           prev.remoteFetching = true;
-          remoteRef.current[item.name] = [];
-          prev.remoteData[item.name] = [];
+          remoteRef.current[names] = [];
+          prev.remoteData[names] = [];
           return prev;
         });
         config
@@ -258,13 +269,13 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           .then((res) => {
             const deb = () => {
               if (current === undefined) {
-                remoteRef.current[item.name] = [];
+                remoteRef.current[names] = [];
               }
-              if (item.name) {
+              if (names) {
                 setState((prev) => {
                   prev.remoteFetching = false;
-                  remoteRef.current[item.name] = res;
-                  prev.remoteData[item.name] = res;
+                  remoteRef.current[names] = res;
+                  prev.remoteData[names] = res;
                   return prev;
                 });
               }
@@ -274,8 +285,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           .catch(() => {
             setState((prev) => {
               prev.remoteFetching = false;
-              remoteRef.current[item.name] = [];
-              prev.remoteData[item.name] = [];
+              remoteRef.current[names] = [];
+              prev.remoteData[names] = [];
               return prev;
             });
           });
@@ -293,34 +304,37 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   const fetchTreeSelect = useCallback(
     (item: FormListType, value?: string) => {
       const config = item.treeSelectConfig;
-      config.data.api(value).then((res) => {
-        if (item.name) {
-          treeSelectRef.current[item.name] = [];
-          let transformTreeSelect: DataNode[] = [];
-          let flattenTreeSelect: DataNode[] = [];
-          // 递归
-          const deep = (original: AnyObjectType[], rear: DataNode[]) => {
-            for (let [i, e] of original.entries()) {
-              const children = config.data.children || 'children';
-              rear[i] = {};
-              rear[i].title = e[config.data.title];
-              rear[i].value = e[config.data.value];
-              rear[i].key = rear[i].value;
-              flattenTreeSelect.push(e); // 添加打平数据
-              if (Array.isArray(e[children])) {
-                rear[i].children = [];
-                deep(e[children], rear[i].children);
+      if (config && config.data) {
+        config.data.api(value).then((res) => {
+          const names = item.name;
+          if (names) {
+            treeSelectRef.current[names] = [];
+            let transformTreeSelect: DataNode[] = [];
+            let flattenTreeSelect: DataNode[] = [];
+            // 递归
+            const deep = (original: AnyObjectType[], rear: DataNode[]) => {
+              for (let [i, e] of original.entries()) {
+                const children = config.data?.children || 'children';
+                rear[i] = {};
+                rear[i].title = e[config.data?.title as string];
+                rear[i].value = e[config.data?.value as string];
+                rear[i].key = rear[i].value;
+                flattenTreeSelect.push(e); // 添加打平数据
+                if (Array.isArray(e[children])) {
+                  rear[i].children = [];
+                  deep(e[children], rear[i].children as DataNode[]);
+                }
               }
-            }
-          };
-          deep(res, transformTreeSelect);
-          setState((prev) => {
-            prev.treeSelectData[item.name] = transformTreeSelect;
-            prev.treeSelectFlattenData[item.name] = flattenTreeSelect;
-            return prev;
-          });
-        }
-      });
+            };
+            deep(res, transformTreeSelect);
+            setState((prev) => {
+              prev.treeSelectData[names] = transformTreeSelect;
+              prev.treeSelectFlattenData[names] = flattenTreeSelect;
+              return prev;
+            });
+          }
+        });
+      }
     },
     [setState],
   );
@@ -460,6 +474,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           disabled={item.disabled}
           placeholder={item.placeholder || `请选择${item.label}`}
           onChange={item.multipleChange}
+          filterOption={(input, option) =>
+            option ? option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0 : false
+          }
           {...item.selectConfig}
         >
           {item.selectData
@@ -498,10 +515,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           showSearch={showSearch === false ? false : true}
           // 当获取焦点查询全部
           onFocus={() => fetchRemote(undefined, item)}
-          onSearch={_.debounce(
-            showSearch === false ? undefined : (value) => fetchRemote(value, item),
-            300,
-          )}
+          onSearch={
+            showSearch === false ? undefined : _.debounce((value) => fetchRemote(value, item), 300)
+          }
           onChange={item.remoteSearchChange}
           {...item.selectConfig}
         >
@@ -534,6 +550,17 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           placeholder={item.rangePickerPlaceholder}
           onChange={item.rangePickerChange}
           {...item.rangePickerConfig}
+        />
+      );
+    };
+    // TimePicker
+    const timePickerRender = (item: FormListType) => {
+      return (
+        <TimePicker
+          disabled={item.disabled}
+          placeholder={item.placeholder || `请选择${item.label}`}
+          onChange={item.timePickerChange}
+          {...item.timePickerConfig}
         />
       );
     };
@@ -579,27 +606,28 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
     };
     // TreeSelect
     const treeSelectRender = (item: FormListType, index: number) => {
+      const names = item.name as string;
       return (
         <TreeSelect
           disabled={item.disabled}
           style={{ width: '100%' }}
           dropdownStyle={{ maxHeight: 400, overflow: 'auto' }}
-          treeData={state.treeSelectData[item.name]}
+          treeData={state.treeSelectData[names]}
           placeholder={item.placeholder || `请选择${item.label}`}
           onChange={(value) => {
-            const treeSelectConfig = item.treeSelectConfig;
-            if (treeSelectConfig && treeSelectConfig.data) {
-              const onChange = item.treeSelectConfig.data.onChange;
-              const flatten = state.treeSelectFlattenData[item.name];
+            if (item.treeSelectConfig && item.treeSelectConfig.data) {
+              const configData = item.treeSelectConfig.data;
+              const onChange = configData.onChange;
+              const flatten = state.treeSelectFlattenData[names];
               const type = Object.prototype.toString.call(value);
-              let changeChild = [];
+              let changeChild: any[] = [];
               let newItem = { ...item };
               if (type === '[object String]') {
-                changeChild = flatten.filter((t) => t[item.treeSelectConfig.data.value] === value);
+                changeChild = flatten.filter((t) => t[configData.value] === value);
               }
               if (type === '[object Array]' && Array.isArray(value)) {
                 for (let i = flatten.length; i--; ) {
-                  if (value.some((t) => t === flatten[i][item.treeSelectConfig.data.value])) {
+                  if (value.some((t) => t === flatten[i][configData.value])) {
                     changeChild.push(flatten[i]);
                   }
                 }
@@ -614,14 +642,14 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
                 }
               }
               form.setFieldsValue({
-                [newItem.name]: value, // 设置对应字段值
+                [newItem.name as string]: value, // 设置对应字段值
               });
               fetchTreeSelect(newItem); // 查询树选择数据
             }
           }}
           allowClear
           treeDefaultExpandAll
-          {...item.treeSelectConfig.extra}
+          {...item.treeSelectConfig?.extra}
         />
       );
     };
@@ -653,6 +681,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       }
       if (m.componentName === 'DatePicker') {
         return datePickerRender(m);
+      }
+      if (m.componentName === 'TimePicker') {
+        return timePickerRender(m);
       }
       if (m.componentName === 'RemoteSearch') {
         return remoteSearchRender(m);
@@ -710,6 +741,9 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
           break;
         case 'RangePicker':
           childForm = rangePickerRender(item);
+          break;
+        case 'TimePicker':
+          childForm = timePickerRender(item);
           break;
         case 'Switch':
           childForm = switchRender(item);
@@ -775,6 +809,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'inputConfig',
         'datePickerConfig',
         'rangePickerConfig',
+        'timePickerConfig',
         'unionConfig',
         'remoteConfig',
         'selectConfig',
@@ -795,6 +830,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         'remoteSearchChange',
         'datePickerChange',
         'rangePickerChange',
+        'timePickerChange',
         'switchChange',
         'radioChange',
         'checkboxChange',
@@ -812,8 +848,8 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
       } else {
         grid = colGirdConfig;
       }
-      return item.visible === false ? null : (
-        <Col {...grid} key={index}>
+      return (
+        <Col {...grid} key={index} style={{ display: item.visible === false ? 'none' : 'block' }}>
           <Form.Item
             className={item.componentName === 'HideInput' ? 'hide-item' : undefined}
             {...resetItem}
@@ -838,11 +874,7 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         // 远程搜索默认查询
         if (item.componentName === 'RemoteSearch') {
           if (item.name && !remoteRef.current[item.name]) {
-            if (
-              item.remoteConfig &&
-              item.remoteConfig.remoteApi &&
-              item.remoteConfig.initLoad !== false
-            ) {
+            if (item.remoteConfig && item.remoteConfig.initLoad !== false) {
               fetchRemote(undefined, item);
             }
           }
@@ -880,6 +912,17 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
         form
           .validateFields()
           .then((values) => {
+            for (let item in values) {
+              // String类型去掉前后空格
+              if (
+                typeofEqual({
+                  data: values[item],
+                  type: 'String',
+                })
+              ) {
+                values[item] = values[item].replace(/(^\s*)|(\s*$)/g, '');
+              }
+            }
             resolve(values);
           })
           .catch((err) => {
@@ -925,4 +968,5 @@ function GenerateForm(props: GenerateFormProp, ref: any) {
   );
 }
 
+/** 动态表单组件 */
 export default React.memo(forwardRef(GenerateForm), isEqualWith);
